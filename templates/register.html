@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - 绿色低碳智能港口调度系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <i class="bi bi-leaf"></i>
+                <h1 data-i18n="auth.systemName">绿色低碳智能港口调度系统</h1>
+                <p data-i18n="auth.registerSubtitle">创建新账号</p>
+            </div>
+
+            <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
+            <div id="successMessage" class="alert alert-success d-none" role="alert"></div>
+
+            <form id="registerForm">
+                <div class="mb-3">
+                    <label for="username" class="form-label" data-i18n="auth.username">用户名</label>
+                    <input type="text" class="form-control" id="username" name="username" required autocomplete="username">
+                    <div class="form-text" data-i18n="auth.usernameHelp">3-80个字符，仅限字母、数字和下划线</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="email" class="form-label" data-i18n="auth.email">邮箱</label>
+                    <input type="email" class="form-control" id="email" name="email" required autocomplete="email">
+                </div>
+
+                <div class="mb-3">
+                    <label for="password" class="form-label" data-i18n="auth.password">密码</label>
+                    <input type="password" class="form-control" id="password" name="password" required autocomplete="new-password">
+                    <div class="form-text" data-i18n="auth.passwordHelp">至少6个字符，必须包含字母和数字</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="confirmPassword" class="form-label" data-i18n="auth.confirmPassword">确认密码</label>
+                    <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required autocomplete="new-password">
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100" id="registerBtn">
+                    <span data-i18n="auth.register">注册</span>
+                    <i class="bi bi-arrow-right ms-2"></i>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <p data-i18n="auth.hasAccount">已有账号？</p>
+                <a href="{{ url_for('login') }}" data-i18n="auth.loginNow">立即登录</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const registerForm = document.getElementById('registerForm');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const registerBtn = document.getElementById('registerBtn');
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!username || !email || !password || !confirmPassword) {
+                showError('请填写所有字段');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showError('两次输入的密码不一致');
+                return;
+            }
+
+            if (password.length < 6) {
+                showError('密码长度至少为6个字符');
+                return;
+            }
+
+            if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+                showError('密码必须包含至少一个字母和一个数字');
+                return;
+            }
+
+            registerBtn.disabled = true;
+            registerBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>注册中...';
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showSuccess('注册成功！3秒后自动跳转到登录页...');
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 3000);
+                } else {
+                    showError(data.error || '注册失败');
+                    registerBtn.disabled = false;
+                    registerBtn.innerHTML = '<span>注册</span><i class="bi bi-arrow-right ms-2"></i>';
+                }
+            } catch (error) {
+                showError('网络错误，请稍后重试');
+                registerBtn.disabled = false;
+                registerBtn.innerHTML = '<span>注册</span><i class="bi bi-arrow-right ms-2"></i>';
+            }
+        });
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('d-none');
+            successMessage.classList.add('d-none');
+            setTimeout(() => {
+                errorMessage.classList.add('d-none');
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.classList.remove('d-none');
+            errorMessage.classList.add('d-none');
+        }
+    </script>
+</body>
+</html>

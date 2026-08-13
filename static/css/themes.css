@@ -1,0 +1,281 @@
+:root[data-theme="dark"] {
+    /* 背景色 */
+    --bg-main: #0a0f1d;
+    --bg-card: #12192c;
+    --bg-hover: #1e2942;
+    --bg-modal: #1a2332;
+
+    /* 边框和分割线 */
+    --border-color: #1e2942;
+    --border-light: #2a3f5f;
+
+    /* 文本颜色 */
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --text-disabled: #64748b;
+
+    /* 主题色 */
+    --color-primary: #06b6d4;
+    --color-primary-hover: #0891b2;
+    --color-primary-light: rgba(6, 182, 212, 0.1);
+
+    /* 状态色 */
+    --color-success: #10b981;
+    --color-success-light: rgba(16, 185, 129, 0.1);
+    --color-warning: #f59e0b;
+    --color-warning-light: rgba(245, 158, 11, 0.1);
+    --color-danger: #ef4444;
+    --color-danger-light: rgba(239, 68, 68, 0.1);
+    --color-info: #3b82f6;
+    --color-info-light: rgba(59, 130, 246, 0.1);
+
+    /* 阴影 */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+
+    /* 图表颜色 */
+    --chart-color-1: #06b6d4;
+    --chart-color-2: #8b5cf6;
+    --chart-color-3: #f59e0b;
+    --chart-color-4: #10b981;
+    --chart-color-5: #ef4444;
+    --chart-grid: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="light"] {
+    /* 背景色 */
+    --bg-main: #f8fafc;
+    --bg-card: #ffffff;
+    --bg-hover: #f1f5f9;
+    --bg-modal: #ffffff;
+
+    /* 边框和分割线 */
+    --border-color: #e2e8f0;
+    --border-light: #cbd5e1;
+
+    /* 文本颜色 */
+    --text-primary: #1e293b;
+    --text-secondary: #475569;
+    --text-muted: #64748b;
+    --text-disabled: #94a3b8;
+
+    /* 主题色 */
+    --color-primary: #0ea5e9;
+    --color-primary-hover: #0284c7;
+    --color-primary-light: rgba(14, 165, 233, 0.1);
+
+    /* 状态色 */
+    --color-success: #059669;
+    --color-success-light: rgba(5, 150, 105, 0.1);
+    --color-warning: #d97706;
+    --color-warning-light: rgba(217, 119, 6, 0.1);
+    --color-danger: #dc2626;
+    --color-danger-light: rgba(220, 38, 38, 0.1);
+    --color-info: #2563eb;
+    --color-info-light: rgba(37, 99, 235, 0.1);
+
+    /* 阴影 */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.15);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+
+    /* 图表颜色 */
+    --chart-color-1: #0ea5e9;
+    --chart-color-2: #8b5cf6;
+    --chart-color-3: #f59e0b;
+    --chart-color-4: #10b981;
+    --chart-color-5: #ef4444;
+    --chart-grid: rgba(0, 0, 0, 0.1);
+}
+
+:root[data-theme="blue"] {
+    /* 背景色 */
+    --bg-main: #0c1e3a;
+    --bg-card: #1a3a5c;
+    --bg-hover: #264a6e;
+    --bg-modal: #1f3852;
+
+    /* 边框和分割线 */
+    --border-color: #2c4f72;
+    --border-light: #3d5f85;
+
+    /* 文本颜色 */
+    --text-primary: #6fb9eb;
+    --text-secondary: #7bbce0;
+    --text-muted: #7dd3fc;
+    --text-disabled: #5eabd8;
+
+    /* 主题色 */
+    --color-primary: #38bdf8;
+    --color-primary-hover: #0ea5e9;
+    --color-primary-light: rgba(56, 189, 248, 0.15);
+
+    /* 状态色 */
+    --color-success: #34d399;
+    --color-success-light: rgba(52, 211, 153, 0.15);
+    --color-warning: #fbbf24;
+    --color-warning-light: rgba(251, 191, 36, 0.15);
+    --color-danger: #f87171;
+    --color-danger-light: rgba(248, 113, 113, 0.15);
+    --color-info: #60a5fa;
+    --color-info-light: rgba(96, 165, 250, 0.15);
+
+    /* 阴影 */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.7);
+
+    /* 图表颜色 */
+    --chart-color-1: #38bdf8;
+    --chart-color-2: #a78bfa;
+    --chart-color-3: #fbbf24;
+    --chart-color-4: #34d399;
+    --chart-color-5: #f87171;
+    --chart-grid: rgba(186, 230, 253, 0.1);
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.card, .modal-content, .dropdown-menu {
+    background-color: var(--bg-card);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.border {
+    border-color: var(--border-color) !important;
+}
+
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+.btn-primary {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.btn-primary:hover {
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+}
+
+.btn-success {
+    background-color: var(--color-success);
+    border-color: var(--color-success);
+}
+
+.btn-warning {
+    background-color: var(--color-warning);
+    border-color: var(--color-warning);
+}
+
+.btn-danger {
+    background-color: var(--color-danger);
+    border-color: var(--color-danger);
+}
+
+.alert-success {
+    background-color: var(--color-success-light);
+    border-color: var(--color-success);
+    color: var(--color-success);
+}
+
+.alert-warning {
+    background-color: var(--color-warning-light);
+    border-color: var(--color-warning);
+    color: var(--color-warning);
+}
+
+.alert-danger {
+    background-color: var(--color-danger-light);
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+}
+
+.alert-info {
+    background-color: var(--color-info-light);
+    border-color: var(--color-info);
+    color: var(--color-info);
+}
+
+.form-control, .form-select {
+    background-color: var(--bg-card);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--bg-card);
+    border-color: var(--color-primary);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 0.25rem var(--color-primary-light);
+}
+
+.form-control::placeholder {
+    color: var(--text-muted);
+}
+
+.table {
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.table th {
+    background-color: var(--bg-hover);
+    border-color: var(--border-color);
+}
+
+.table td {
+    border-color: var(--border-color);
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--bg-hover);
+}
+
+.nav-tabs {
+    border-color: var(--border-color);
+}
+
+.nav-tabs .nav-link {
+    color: var(--text-secondary);
+}
+
+.nav-tabs .nav-link:hover {
+    border-color: var(--border-light);
+    color: var(--text-primary);
+}
+
+.nav-tabs .nav-link.active {
+    background-color: var(--bg-card);
+    border-color: var(--border-color);
+    color: var(--color-primary);
+}
+
+.badge {
+    background-color: var(--color-primary);
+    color: var(--bg-card);
+}
+
+a {
+    color: var(--color-primary);
+}
+
+a:hover {
+    color: var(--color-primary-hover);
+}
+
+hr {
+    border-color: var(--border-color);
+    opacity: 1;
+}

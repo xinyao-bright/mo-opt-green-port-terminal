@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}{{ i18n.t('portConfig.title') if i18n else '泊位配置管理' }} - 绿色低碳智能港口调度系统{% endblock %}
+
+{% block extra_css %}
+<style>
+    .config-container {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 20px;
+        padding: 20px;
+        min-height: calc(100vh - 160px);
+    }
+    .config-list {
+        background: var(--bg-card);
+        border-radius: 8px;
+        padding: 20px;
+        overflow-y: auto;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-md);
+    }
+    .config-list h5 {
+        margin-bottom: 15px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    .config-item {
+        padding: 15px;
+        margin-bottom: 10px;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: var(--bg-hover);
+        color: var(--text-primary);
+    }
+    .config-item:hover {
+        border-color: var(--color-primary);
+        background: var(--bg-card);
+        transform: translateX(4px);
+    }
+    .config-item.active {
+        border-color: var(--color-success);
+        background: var(--color-success-light);
+        border-width: 3px;
+    }
+    .config-item.selected {
+        border-color: var(--color-primary);
+        background: var(--color-primary-light);
+        border-width: 3px;
+    }
+    .config-editor {
+        background: var(--bg-card);
+        border-radius: 8px;
+        padding: 30px;
+        overflow-y: auto;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-md);
+    }
+    .config-editor h4 {
+        color: var(--text-primary);
+        margin-bottom: 20px;
+        font-weight: 700;
+    }
+    .config-editor h5 {
+        color: var(--text-primary);
+        margin-top: 25px;
+        margin-bottom: 15px;
+        font-weight: 700;
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 10px;
+    }
+    .berth-table {
+        margin-top: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .berth-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 50px;
+        gap: 10px;
+        align-items: center;
+        padding: 10px;
+        background: var(--bg-hover);
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        transition: all 0.2s;
+    }
+    .berth-row:hover {
+        background: var(--bg-card);
+        border-color: var(--color-primary);
+    }
+    .berth-row input {
+        font-size: 0.9rem;
+    }
+    .badge-active {
+        background-color: var(--color-success);
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+    .form-label {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+    }
+    .form-control, .form-select {
+        font-size: 0.95rem;
+    }
+    .btn-group-bottom {
+        display: flex;
+        gap: 10px;
+        margin-top: 25px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    .btn-success:hover, .btn-warning:hover, .btn-danger:hover, .btn-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    @media (max-width: 992px) {
+        .config-container {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="config-container">
+    <div class="config-list">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 data-i18n="portConfig.configList">配置列表</h5>
+            <button class="btn btn-primary btn-sm" onclick="createNewConfig()">
+                <i class="bi bi-plus-lg"></i>
+                <span data-i18n="portConfig.createNew">创建新配置</span>
+            </button>
+        </div>
+        <div id="configListContainer"></div>
+    </div>
+
+    <div class="config-editor">
+        <h4 data-i18n="portConfig.title">泊位配置管理</h4>
+        <hr style="border-color: var(--border-color);">
+        <form id="configForm">
+            <input type="hidden" id="configId">
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label" data-i18n="portConfig.configName">配置名称</label>
+                    <input type="text" class="form-control" id="configName" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" data-i18n="portConfig.totalBerths">泊位总数</label>
+                    <input type="number" class="form-control" id="totalBerths" min="1" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" data-i18n="portConfig.totalQCs">岸桥总数</label>
+                    <input type="number" class="form-control" id="totalQCs" min="1" required>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label class="form-label" data-i18n="portConfig.qcEfficiency">岸桥效率 (TEU/h)</label>
+                    <input type="number" class="form-control" id="qcEfficiency" step="0.1" value="48" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">最大岸桥数/船</label>
+                    <input type="number" class="form-control" id="maxQcPerVessel" min="1" value="3" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">安全间隔 (小时)</label>
+                    <input type="number" class="form-control" id="safetyInterval" step="0.01" value="0.167" required>
+                </div>
+            </div>
+
+            <h5 class="mt-4" data-i18n="portConfig.berthDetails">泊位详情</h5>
+            <div class="berth-table" id="berthTable"></div>
+            <button type="button" class="btn btn-sm btn-outline-primary mt-3" onclick="addBerthRow()">
+                <i class="bi bi-plus-lg"></i>
+                <span data-i18n="portConfig.addBerth">添加泊位</span>
+            </button>
+
+            <div class="btn-group-bottom">
+                <button type="submit" class="btn btn-success" data-i18n="portConfig.save">保存</button>
+                <button type="button" class="btn btn-warning" onclick="activateCurrentConfig()" data-i18n="portConfig.activate">激活此配置</button>
+                <button type="button" class="btn btn-danger" onclick="deleteCurrentConfig()" data-i18n="portConfig.delete">删除</button>
+                <button type="button" class="btn btn-secondary" onclick="resetForm()" data-i18n="portConfig.cancel">取消</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/port_config.js') }}"></script>
+{% endblock %}
