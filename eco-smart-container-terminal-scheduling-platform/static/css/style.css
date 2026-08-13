@@ -1,0 +1,678 @@
+/* 主样式文件 - 使用CSS变量支持主题切换 */
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* 统一卡片 */
+.twin-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+.card-title-bar {
+    background-color: var(--bg-hover);
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 船舶列表池 */
+.ship-scroll-box {
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.ship-scroll-box::-webkit-scrollbar {
+    width: 4px;
+}
+
+.ship-scroll-box::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
+}
+
+.ship-mini-card {
+    background-color: var(--bg-hover);
+    border-left: 3px solid var(--color-primary);
+    border-radius: 4px;
+    padding: 6px 10px;
+    margin-bottom: 6px;
+    transition: all 0.2s ease;
+}
+
+.ship-mini-card:hover {
+    background-color: var(--bg-card);
+    border-left-color: var(--color-primary-hover);
+}
+
+/* 文件选择信息 */
+.selected-file-info {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    padding: 4px 8px;
+    background: var(--bg-hover);
+    border-radius: 4px;
+}
+
+/* 调色滑块 */
+.twin-range {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    background: var(--bg-hover);
+    border-radius: 3px;
+    outline: none;
+    margin: 8px 0;
+}
+
+.twin-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    cursor: pointer;
+    box-shadow: 0 0 8px var(--color-primary);
+}
+
+.twin-range::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    cursor: pointer;
+    border: none;
+}
+
+/* 帕累托方案卡片 */
+.pareto-card-row {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 10px;
+}
+
+.pareto-card-row::-webkit-scrollbar {
+    height: 6px;
+}
+
+.pareto-card-row::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+
+.p-card {
+    min-width: 180px;
+    background-color: var(--bg-hover);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.p-card:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.p-card.active {
+    background-color: var(--color-primary-light);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 12px var(--color-primary-light);
+}
+
+.p-card.recommended {
+    border-color: var(--color-success);
+    position: relative;
+}
+
+.p-card.recommended::after {
+    content: 'RECOMMENDED';
+    position: absolute;
+    top: -6px;
+    right: 6px;
+    background-color: var(--color-success);
+    color: var(--bg-card);
+    font-size: 9px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+/* KPI 指标块 */
+.kpi-block {
+    background-color: var(--bg-card);
+    border-top: 4px solid var(--color-primary);
+    border-radius: 6px;
+    padding: 16px;
+    box-shadow: var(--shadow-md);
+}
+
+.kpi-block.border-primary {
+    border-top-color: var(--color-primary);
+}
+
+.kpi-block.border-success {
+    border-top-color: var(--color-success);
+}
+
+.kpi-block.border-warning {
+    border-top-color: var(--color-warning);
+}
+
+.kpi-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.kpi-val {
+    font-size: 1.8rem;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+}
+
+/* Canvas画布包裹 */
+.bg-port-canvas-wrap {
+    background: var(--bg-main);
+    border-radius: 4px;
+}
+
+#portCanvas {
+    max-width: 100%;
+    height: auto;
+}
+
+/* 表格样式 */
+.table {
+    color: var(--text-primary);
+}
+
+.table th {
+    background-color: var(--bg-hover);
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+}
+
+.table td {
+    background-color: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--bg-hover);
+}
+
+/* 按钮样式增强 */
+.btn-primary {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--bg-card);
+}
+
+.btn-primary:hover {
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+}
+
+.btn-outline-primary {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--bg-card);
+}
+
+/* 文本颜色类 */
+.text-primary {
+    color: var(--color-primary) !important;
+}
+
+.text-success {
+    color: var(--color-success) !important;
+}
+
+.text-warning {
+    color: var(--color-warning) !important;
+}
+
+.text-danger {
+    color: var(--color-danger) !important;
+}
+
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+/* 尺寸工具类 */
+.text-xs {
+    font-size: 0.75rem;
+}
+
+.text-sm {
+    font-size: 0.875rem;
+}
+
+.fs-7 {
+    font-size: 0.9rem;
+}
+
+.fs-8 {
+    font-size: 0.8rem;
+}
+
+/* Modal样式 */
+.modal-content {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.modal-header {
+    border-bottom-color: var(--border-color);
+}
+
+.modal-footer {
+    border-top-color: var(--border-color);
+}
+
+.btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* 表单控件 */
+.form-control,
+.form-select {
+    background-color: var(--bg-card);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--bg-card);
+    border-color: var(--color-primary);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 0.25rem var(--color-primary-light);
+}
+
+.form-control::placeholder {
+    color: var(--text-muted);
+}
+
+/* 响应式调整 */
+@media (max-width: 992px) {
+    .kpi-val {
+        font-size: 1.5rem;
+    }
+
+    .pareto-card-row {
+        padding: 8px;
+    }
+
+    .p-card {
+        min-width: 160px;
+        padding: 10px;
+    }
+}
+
+@media (max-width: 768px) {
+    .kpi-block {
+        padding: 12px;
+    }
+
+    .kpi-val {
+        font-size: 1.3rem;
+    }
+
+    .ship-scroll-box {
+        max-height: 180px;
+    }
+
+    #portCanvas {
+        width: 100%;
+        height: auto;
+    }
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.twin-card {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* 加载状态 */
+.btn.loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.btn.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Badge样式 */
+.badge {
+    font-weight: 600;
+    padding: 4px 8px;
+}
+
+.bg-primary {
+    background-color: var(--color-primary) !important;
+}
+
+.bg-success {
+    background-color: var(--color-success) !important;
+}
+
+.bg-warning {
+    background-color: var(--color-warning) !important;
+}
+
+.bg-danger {
+    background-color: var(--color-danger) !important;
+}
+
+/* ============================================
+   Pareto方案选择网格 (redesigned dashboard)
+   ============================================ */
+.pareto-solution-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.pareto-card {
+    position: relative;
+    background: var(--bg-hover);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pareto-card:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+
+.pareto-card.active {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+    box-shadow: 0 0 0 3px var(--color-primary-light), 0 4px 16px rgba(0,0,0,0.2);
+}
+
+.pareto-card.recommended {
+    border-color: var(--color-success);
+}
+
+.pareto-card.recommended::before {
+    content: '推荐';
+    position: absolute;
+    top: -1px;
+    right: 12px;
+    background: var(--color-success);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 0 0 4px 4px;
+}
+
+.pareto-card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+}
+
+.pareto-card-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.pareto-metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+}
+
+.pareto-metric-label {
+    color: var(--text-muted);
+}
+
+.pareto-metric-value {
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+}
+
+.pareto-metric-value.co2 { color: var(--color-primary); }
+.pareto-metric-value.time { color: var(--color-success); }
+.pareto-metric-value.cost { color: var(--color-warning); }
+
+/* ============================================
+   甘特图容器
+   ============================================ */
+.gantt-container {
+    width: 100%;
+    min-height: 200px;
+    overflow-x: auto;
+}
+
+.gantt-chart {
+    position: relative;
+    width: 100%;
+    min-width: 700px;
+}
+
+.gantt-header {
+    display: flex;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+}
+
+.gantt-berth-label {
+    width: 80px;
+    min-width: 80px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.gantt-timeline {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.gantt-row {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    min-height: 42px;
+    position: relative;
+}
+
+.gantt-row-label {
+    width: 80px;
+    min-width: 80px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding: 4px 8px 4px 0;
+}
+
+.gantt-row-track {
+    flex: 1;
+    position: relative;
+    height: 36px;
+}
+
+.gantt-bar {
+    position: absolute;
+    height: 28px;
+    top: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    padding: 0 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.gantt-bar:hover {
+    opacity: 0.85;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+.gantt-bar .bar-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gantt-bar .bar-time {
+    font-size: 9px;
+    opacity: 0.8;
+    margin-left: 4px;
+}
+
+/* ============================================
+   详细表格优化
+   ============================================ */
+.schedule-detail-table {
+    font-size: 13px;
+}
+
+.schedule-detail-table th {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 10px 8px;
+    white-space: nowrap;
+}
+
+.schedule-detail-table td {
+    padding: 8px;
+    vertical-align: middle;
+}
+
+.schedule-detail-table .ship-name-cell {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.schedule-detail-table .berth-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 12px;
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+.schedule-detail-table .qc-badge {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--color-warning);
+}
+
+.schedule-detail-table .wait-zero {
+    color: var(--color-success);
+}
+
+.schedule-detail-table .wait-high {
+    color: var(--color-danger);
+    font-weight: 700;
+}
+
+/* metrics mini cards */
+.metric-mini {
+    background: var(--bg-hover);
+    border-radius: 6px;
+    padding: 10px 12px;
+    text-align: center;
+}
+
+.metric-mini-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.metric-mini-value {
+    font-size: 18px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    color: var(--text-primary);
+}
