@@ -1,104 +1,131 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>登录 - 绿色低碳智能港口调度系统</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <meta name="theme-color" content="#102d42">
+    <title>{% block title %}登录{% endblock %} - 绿色低碳智能港口调度系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+    <script>
+        try { document.documentElement.dataset.theme = localStorage.getItem('port-schedule-theme') || 'light'; } catch (_) {}
+    </script>
 </head>
 <body>
-    <div class="auth-container">
-        <div class="auth-card">
-            <div class="auth-header">
-                <i class="bi bi-leaf"></i>
-                <h1 data-i18n="auth.systemName">绿色低碳智能港口调度系统</h1>
-                <p data-i18n="auth.loginSubtitle">登录您的账号</p>
+    <main class="auth-layout">
+        <section class="auth-story" aria-labelledby="storyTitle">
+            <a class="auth-brand" href="{{ url_for('login') }}" aria-label="港口智能调度">
+                <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M5 23V13l11-6 11 6v10M5 13l11 6 11-6M16 19v8M10 10l12 7" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m4 24 12 6 12-6" stroke="currentColor" stroke-width="1.8"/></svg></span>
+                <span><strong data-auth-zh="港口智能调度" data-auth-en="EcoPort Scheduling">港口智能调度</strong><small>ECO · SMART · TERMINAL</small></span>
+            </a>
+            <div class="story-content">
+                <span class="story-eyebrow"><span></span><span data-auth-zh="绿色港口 · 智慧协同" data-auth-en="GREEN PORT · SMART OPERATIONS">绿色港口 · 智慧协同</span></span>
+                <h1 id="storyTitle"><span data-auth-zh="让每一次靠泊" data-auth-en="Every vessel.">让每一次靠泊</span><br><span class="story-accent" data-auth-zh="更高效，更低碳。" data-auth-en="A smarter arrival.">更高效，更低碳。</span></h1>
+                <p data-auth-zh="连接船舶、泊位与岸桥，以智能调度让港口运转井然有序。" data-auth-en="Connect vessels, berths and quay cranes. Bring clarity to every port operation.">连接船舶、泊位与岸桥，以智能调度让港口运转井然有序。</p>
             </div>
-
-            <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
-
-            <form id="loginForm">
-                <div class="mb-3">
-                    <label for="username" class="form-label" data-i18n="auth.username">用户名</label>
-                    <input type="text" class="form-control" id="username" name="username" required autocomplete="username">
-                </div>
-
-                <div class="mb-3">
-                    <label for="password" class="form-label" data-i18n="auth.password">密码</label>
-                    <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password">
-                </div>
-
-                <div class="mb-3 form-check">
-                    <input type="checkbox" class="form-check-input" id="remember" name="remember">
-                    <label class="form-check-label" for="remember" data-i18n="auth.rememberMe">记住我</label>
-                </div>
-
-                <button type="submit" class="btn btn-primary w-100" id="loginBtn">
-                    <span data-i18n="auth.login">登录</span>
-                    <i class="bi bi-arrow-right ms-2"></i>
-                </button>
-            </form>
-
-            <div class="auth-footer">
-                <p data-i18n="auth.noAccount">还没有账号？</p>
-                <a href="{{ url_for('register') }}" data-i18n="auth.registerNow">立即注册</a>
+            <div class="port-illustration" aria-hidden="true">
+                <div class="port-caption"><span class="caption-dot"></span>TERMINAL OPERATIONS<span class="caption-line"></span>01 / ECO PORT</div>
+                <svg viewBox="0 0 620 310" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs><pattern id="portGrid" width="31" height="31" patternUnits="userSpaceOnUse"><path d="M31 0H0V31" stroke="#6c9caf" stroke-opacity=".1"/></pattern><linearGradient id="waterFade" x1="310" y1="216" x2="310" y2="310" gradientUnits="userSpaceOnUse"><stop stop-color="#2da7ad" stop-opacity=".13"/><stop offset="1" stop-color="#2da7ad" stop-opacity="0"/></linearGradient></defs>
+                    <rect width="620" height="310" fill="url(#portGrid)"/>
+                    <path d="M18 208H602" stroke="#769cae" stroke-opacity=".5"/>
+                    <path d="M32 198V180H236V198M246 198V166H395V198M410 198V176H590V198" stroke="#62899c" stroke-opacity=".45"/>
+                    <g stroke="#91b4c3" stroke-width="2" stroke-linejoin="round"><path d="M95 190V67H142V190M84 190H104M133 190H152M93 67H318V78H74V67H93ZM142 67 198 23 253 67M198 23V78M95 80l47 75M142 80l-47 75M118 78v91"/><path d="M292 78v50m-10 0h20v10h-20z"/><path d="M368 193V99h35v94M357 193h22M394 193h21M350 90h208v9H350zM403 90l43-34 43 34M446 56v43M368 109l35 62M403 109l-35 62M534 99v37"/></g>
+                    <g stroke="#2f8c94" fill="#163e50" stroke-width="1.2"><path d="M176 158h43v24h-43zM221 158h43v24h-43zM266 158h43v24h-43zM198 132h43v24h-43zM243 132h43v24h-43z"/><path d="M182 162v16m7-16v16m7-16v16m7-16v16m7-16v16m17-16v16m7-16v16m7-16v16m7-16v16m7-16v16m17-16v16m7-16v16m7-16v16m7-16v16m7-16v16M204 136v16m7-16v16m7-16v16m7-16v16m7-16v16m17-16v16m7-16v16m7-16v16m7-16v16m7-16v16"/></g>
+                    <path d="M40 221h539l-35 44H107L76 253z" fill="#194a5b" stroke="#89b4c4" stroke-width="1.8" stroke-linejoin="round"/>
+                    <path d="M69 222v-31h47v31M75 191v-25h29v25M85 166v-17M84 166h32" stroke="#9bbcc9" stroke-width="1.8"/><path d="M80 199h9m7 0h9M80 207h9m7 0h9" stroke="#8bb0c0" stroke-width="2"/>
+                    <g fill="#20737f" stroke="#70b1b8" stroke-width="1.2"><path d="M129 195h52v26h-52zM185 195h52v26h-52zM241 195h52v26h-52zM297 195h52v26h-52zM353 195h52v26h-52zM409 195h52v26h-52zM465 195h52v26h-52z"/></g>
+                    <g stroke="#70b1b8" stroke-opacity=".55"><path d="M138 199v18m10-18v18m10-18v18m10-18v18M194 199v18m10-18v18m10-18v18m10-18v18M250 199v18m10-18v18m10-18v18m10-18v18M306 199v18m10-18v18m10-18v18m10-18v18M362 199v18m10-18v18m10-18v18m10-18v18M418 199v18m10-18v18m10-18v18m10-18v18M474 199v18m10-18v18m10-18v18m10-18v18"/></g>
+                    <path d="M23 269h572v41H23z" fill="url(#waterFade)"/><path d="M43 280h129m24 0h232m24 0h91M119 295h134m32 0h224" stroke="#68acb7" stroke-opacity=".35" stroke-linecap="round"/>
+                    <path d="M474 158h17l-11 13h15l-22 22 6-17h-13z" fill="#7aceb0"/>
+                    <circle cx="567" cy="40" r="19" stroke="#5c928d" stroke-opacity=".45"/><path d="m559 41 5 5 10-11" stroke="#7aceb0" stroke-width="2" stroke-linecap="round"/>
+                </svg>
             </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            <div class="story-footer">
+                <div><span>01</span><strong data-auth-zh="协同调度" data-auth-en="Coordination">协同调度</strong></div>
+                <div><span>02</span><strong data-auth-zh="低碳运营" data-auth-en="Low carbon">低碳运营</strong></div>
+                <div><span>03</span><strong data-auth-zh="数据洞察" data-auth-en="Data insights">数据洞察</strong></div>
+            </div>
+        </section>
+        <section class="auth-panel">
+            <div class="auth-preferences">
+                <label class="visually-hidden" for="themeSelector" data-auth-zh="界面主题" data-auth-en="Theme">界面主题</label>
+                <select id="themeSelector" aria-label="界面主题"><option value="light" data-auth-zh="云白" data-auth-en="Cloud White">云白</option><option value="dark" data-auth-zh="石墨黑" data-auth-en="Graphite">石墨黑</option><option value="blue" data-auth-zh="深海蓝" data-auth-en="Deep Ocean">深海蓝</option></select>
+                <span class="preference-divider"></span>
+                <label class="visually-hidden" for="langSelector">Language / 语言</label>
+                <select id="langSelector" aria-label="Language / 语言"><option value="zh-CN">简体中文</option><option value="en">English</option></select>
+            </div>
+            <div class="auth-card {% block card_class %}{% endblock %}">
+                {% block form_content %}
+                <header class="auth-header"><span class="auth-eyebrow">WELCOME BACK</span><h2 data-auth-zh="欢迎回来" data-auth-en="Welcome back">欢迎回来</h2><p data-auth-zh="登录账号，开始今日的港口调度。" data-auth-en="Sign in to plan your next port operation.">登录账号，开始今日的港口调度。</p></header>
+                <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
+                <form id="loginForm" method="post" action="{{ url_for('login') }}">
+                    <div class="form-field"><label for="username" data-i18n="auth.username">用户名</label><input type="text" id="username" name="username" required autocomplete="username" placeholder="请输入用户名" data-auth-placeholder-zh="请输入用户名" data-auth-placeholder-en="Enter your username"></div>
+                    <div class="form-field"><label for="password" data-i18n="auth.password">密码</label><div class="password-field"><input type="password" id="password" name="password" required autocomplete="current-password" placeholder="请输入密码" data-auth-placeholder-zh="请输入密码" data-auth-placeholder-en="Enter your password"><button class="password-toggle" type="button" data-password-target="password" aria-label="显示密码" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg></button></div></div>
+                    <label class="remember-field"><input type="checkbox" id="remember" name="remember"><span data-i18n="auth.rememberMe">记住我</span></label>
+                    <button type="submit" class="auth-submit" id="loginBtn"><span data-auth-zh="进入调度工作台" data-auth-en="Open your workspace">进入调度工作台</span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                </form>
+                <div class="auth-footer"><span data-i18n="auth.noAccount">还没有账号？</span><a href="{{ url_for('register') }}" data-i18n="auth.registerNow">立即注册</a></div>
+                {% endblock %}
+            </div>
+            <p class="auth-legal" data-auth-zh="绿色低碳智能港口调度系统" data-auth-en="Green Low-Carbon Smart Port Scheduling">绿色低碳智能港口调度系统</p>
+        </section>
+    </main>
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
+    <script>
+        function authText(zh, en) { return document.documentElement.lang === 'en' ? en : zh; }
+        function translateAuth() {
+            const english = document.documentElement.lang === 'en';
+            document.querySelectorAll('[data-auth-zh]').forEach(el => { el.textContent = english ? el.dataset.authEn : el.dataset.authZh; });
+            document.querySelectorAll('[data-auth-placeholder-zh]').forEach(el => { el.placeholder = english ? el.dataset.authPlaceholderEn : el.dataset.authPlaceholderZh; });
+            document.querySelectorAll('[data-password-target]').forEach(button => { button.setAttribute('aria-label', button.getAttribute('aria-pressed') === 'true' ? authText('隐藏密码', 'Hide password') : authText('显示密码', 'Show password')); });
+            document.getElementById('themeSelector').setAttribute('aria-label', authText('界面主题', 'Theme'));
+            document.title = authText('{% block title_zh %}登录{% endblock %} - 港口智能调度', '{% block title_en %}Sign in{% endblock %} - EcoPort Scheduling');
+        }
+        window.addEventListener('localeChanged', translateAuth);
+        translateAuth();
+        document.querySelectorAll('[data-password-target]').forEach(button => {
+            button.addEventListener('click', () => {
+                const input = document.getElementById(button.dataset.passwordTarget);
+                const visible = input.type === 'password';
+                input.type = visible ? 'text' : 'password';
+                button.setAttribute('aria-pressed', String(visible));
+                button.setAttribute('aria-label', visible ? authText('隐藏密码', 'Hide password') : authText('显示密码', 'Show password'));
+            });
+        });
+        function setAuthBusy(button, busy, zh, en) {
+            button.disabled = busy;
+            button.setAttribute('aria-busy', String(busy));
+            button.classList.toggle('is-busy', busy);
+            if (!button.dataset.originalHtml) button.dataset.originalHtml = button.innerHTML;
+            if (busy) button.innerHTML = '<span class="auth-spinner" aria-hidden="true"></span><span>' + authText(zh, en) + '</span>';
+            else { button.innerHTML = button.dataset.originalHtml; translateAuth(); }
+        }
+    </script>
+    {% block auth_script %}
     <script>
         const loginForm = document.getElementById('loginForm');
         const errorMessage = document.getElementById('errorMessage');
         const loginBtn = document.getElementById('loginBtn');
-
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
+        loginForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (loginBtn.disabled) return;
+            errorMessage.classList.add('d-none');
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             const remember = document.getElementById('remember').checked;
-
-            if (!username || !password) {
-                showError('请输入用户名和密码');
-                return;
-            }
-
-            loginBtn.disabled = true;
-            loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>登录中...';
-
+            if (!username || !password) { showError(authText('请输入用户名和密码', 'Enter your username and password.')); return; }
+            setAuthBusy(loginBtn, true, '正在登录…', 'Signing in…');
             try {
-                const response = await fetch('/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password, remember })
-                });
-
+                const response = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password, remember }) });
                 const data = await response.json();
-
-                if (data.success) {
-                    window.location.href = '/';
-                } else {
-                    showError(data.error || '登录失败');
-                    loginBtn.disabled = false;
-                    loginBtn.innerHTML = '<span>登录</span><i class="bi bi-arrow-right ms-2"></i>';
-                }
-            } catch (error) {
-                showError('网络错误，请稍后重试');
-                loginBtn.disabled = false;
-                loginBtn.innerHTML = '<span>登录</span><i class="bi bi-arrow-right ms-2"></i>';
-            }
+                if (data.success) window.location.href = '/';
+                else { showError(data.error || authText('登录失败', 'Sign-in failed.')); setAuthBusy(loginBtn, false); }
+            } catch (error) { showError(authText('网络错误，请稍后重试', 'Connection failed. Please try again.')); setAuthBusy(loginBtn, false); }
         });
-
-        function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.classList.remove('d-none');
-            setTimeout(() => {
-                errorMessage.classList.add('d-none');
-            }, 5000);
-        }
+        function showError(message) { errorMessage.textContent = message; errorMessage.classList.remove('d-none'); }
     </script>
+    {% endblock %}
 </body>
 </html>

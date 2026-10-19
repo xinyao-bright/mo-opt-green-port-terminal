@@ -4,9 +4,9 @@
         "fullName": "绿色低碳港航泊位与岸桥联合智能调度系统"
     },
     "nav": {
-        "home": "首页",
-        "portConfig": "泊位配置",
-        "history": "历史记录",
+        "home": "调度工作台",
+        "portConfig": "泊位与资源",
+        "history": "调度历史",
         "docs": "文档",
         "logout": "退出",
         "about": "关于",
@@ -69,7 +69,7 @@
     },
     "schedule": {
         "title": "调度参数配置",
-        "runAlgorithm": "运行调度算法",
+        "runAlgorithm": "开始智能调度",
         "running": "算法运行中...",
         "weights": "目标权重",
         "co2Weight": "碳排放权重",
@@ -172,9 +172,9 @@
         "refresh": "刷新"
     },
     "theme": {
-        "dark": "暗黑模式",
-        "light": "明亮模式",
-        "blue": "海洋蓝"
+        "dark": "石墨黑",
+        "light": "云白",
+        "blue": "深海蓝"
     },
     "language": {
         "zh-CN": "简体中文",

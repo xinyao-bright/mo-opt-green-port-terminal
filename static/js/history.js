@@ -1,236 +1,159 @@
 let historyData = [];
+let historyLoaded = false;
+let historyRequestId = 0;
+let detailRequestId = 0;
+const deletingHistoryIds = new Set();
+
+function escapeHistory(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char]));
+}
+
+function historyNumber(value, digits = 2) {
+    if (value === null || value === undefined || value === '' || !Number.isFinite(Number(value))) return '—';
+    return Number(value).toLocaleString(typeof i18n !== 'undefined' ? i18n.locale : 'zh-CN', {minimumFractionDigits: digits, maximumFractionDigits: digits});
+}
+
+function historyDate(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '时间未知' : date.toLocaleString(typeof i18n !== 'undefined' ? i18n.locale : 'zh-CN', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'});
+}
+
+function historyNotice(message, type = 'danger') {
+    const notice = document.getElementById('historyNotice');
+    notice.textContent = message;
+    notice.className = `alert alert-${type} mx-4`;
+}
+
+function historyExportUrl(historyId, solutionId) {
+    const url = `/api/history/${encodeURIComponent(historyId)}/export`;
+    return solutionId === undefined ? url : `${url}?solution=${encodeURIComponent(solutionId)}`;
+}
+
+function validHistoryDates() {
+    const start = document.getElementById('filterStartDate').value;
+    const end = document.getElementById('filterEndDate').value;
+    if (start && end && start > end) {
+        historyNotice('开始日期不能晚于结束日期，请调整日期范围。', 'warning');
+        return false;
+    }
+    return true;
+}
 
 async function loadHistory() {
+    if (!validHistoryDates()) return;
+    const requestId = ++historyRequestId;
+    document.getElementById('historyNotice').classList.add('d-none');
+    document.getElementById('historyList').innerHTML = '<div class="page-empty"><div class="spinner-border spinner-border-sm" role="status"></div><p>正在加载调度记录…</p></div>';
     try {
         const response = await fetch('/api/history');
-        if (!response.ok) throw new Error('Failed to load history');
-
-        historyData = await response.json();
+        if (!response.ok) throw new Error('暂时无法读取调度记录，请稍后重试。');
+        const result = await response.json();
+        if (!Array.isArray(result)) throw new Error('调度记录数据格式异常，请重新加载。');
+        if (requestId !== historyRequestId) return;
+        historyData = result;
+        historyLoaded = true;
+        document.getElementById('historyCount').textContent = historyNumber(result.length, 0);
+        document.getElementById('historyShipCount').textContent = historyNumber(result.reduce((sum, item) => sum + (item.shipsData?.length || 0), 0), 0);
+        document.getElementById('historySolutionCount').textContent = historyNumber(result.reduce((sum, item) => sum + (item.solutions?.length || 0), 0), 0);
         renderHistory();
     } catch (error) {
-        console.error('Error loading history:', error);
-        document.getElementById('historyList').innerHTML = `
-            <div class="alert alert-danger">${i18n.t('messages.networkError')}</div>
-        `;
+        if (requestId !== historyRequestId) return;
+        document.getElementById('historyResultLabel').textContent = '读取失败';
+        document.getElementById('historyList').innerHTML = '<div class="page-empty"><i class="bi bi-wifi-off"></i><h3>暂时无法加载记录</h3><p>检查网络连接后，再试一次。</p><button class="btn btn-outline-primary btn-sm" onclick="loadHistory()">重新加载</button></div>';
+        historyNotice(error.message || '网络连接异常，请重新加载。');
     }
+}
+
+function historyMetrics(solution) {
+    return `<div class="history-metrics">
+        <div class="history-metric"><span class="history-metric-label"><i class="bi bi-cloud"></i>CO₂ 排放</span><strong>${historyNumber(solution.co2)}</strong><small>kg</small></div>
+        <div class="history-metric"><span class="history-metric-label"><i class="bi bi-clock"></i>在港停留时间</span><strong>${historyNumber(solution.stayTime)}</strong><small>小时</small></div>
+        <div class="history-metric"><span class="history-metric-label"><i class="bi bi-wallet2"></i>联合调度成本</span><strong>${historyNumber(solution.cost)}</strong><small>元</small></div>
+    </div>`;
 }
 
 function renderHistory() {
+    if (!validHistoryDates()) return;
+    const startValue = document.getElementById('filterStartDate').value;
+    const endValue = document.getElementById('filterEndDate').value;
+    const start = startValue ? new Date(`${startValue}T00:00:00`) : null;
+    const end = endValue ? new Date(`${endValue}T23:59:59.999`) : null;
+    const filtered = historyData.filter(item => {
+        const date = new Date(item.createdAt);
+        return (!start || date >= start) && (!end || date <= end);
+    });
     const container = document.getElementById('historyList');
-
-    if (historyData.length === 0) {
-        container.innerHTML = `
-            <div class="text-center text-muted py-5">
-                <i class="bi bi-inbox" style="font-size: 48px;"></i>
-                <p class="mt-3" data-i18n="common.noData">暂无数据</p>
-            </div>
-        `;
-        i18n.updateDOM();
+    document.getElementById('historyResultLabel').textContent = start || end ? `筛选到 ${filtered.length} 条记录，共 ${historyData.length} 条` : `共 ${historyData.length} 条历史记录`;
+    if (!filtered.length) {
+        container.innerHTML = historyData.length
+            ? '<div class="page-empty"><i class="bi bi-calendar2-range"></i><h3>该日期范围内暂无记录</h3><p>试着扩大日期范围，或查看全部调度记录。</p><button class="btn btn-sm btn-outline-primary" onclick="resetFilters()">查看全部记录</button></div>'
+            : '<div class="page-empty"><i class="bi bi-clock-history"></i><h3>第一份调度记录，即将从这里开始</h3><p>完成一次智能调度后，方案和关键指标会自动保存在这里。</p><a class="btn btn-primary" href="/">前往调度工作台 <i class="bi bi-arrow-right"></i></a></div>';
         return;
     }
-
-    container.innerHTML = historyData.map(item => {
-        const date = new Date(item.createdAt);
-        const solutions = item.solutions || [];
-        const bestSolution = solutions.find(s => s.isRecommended) || solutions[0];
+    container.innerHTML = filtered.map(item => {
+        const solutions = Array.isArray(item.solutions) ? item.solutions : [];
+        const best = solutions.find(solution => solution.isRecommended) || solutions[0];
         const weights = item.weights || {};
-
-        return `
-            <div class="history-item">
-                <div class="history-meta">
-                    <div class="meta-item">
-                        <span class="meta-label" data-i18n="history.timestamp">时间</span>
-                        <span class="meta-value">${i18n.formatDate(date)}</span>
-                    </div>
-                    <div class="meta-item">
-                        <span class="meta-label" data-i18n="history.shipCount">船舶数量</span>
-                        <span class="meta-value">${item.shipsData?.length || 0}</span>
-                    </div>
-                    <div class="meta-item">
-                        <span class="meta-label" data-i18n="history.config">配置</span>
-                        <span class="meta-value">${item.configName || '默认配置'}</span>
-                    </div>
-                    <div class="meta-item">
-                        <span class="meta-label" data-i18n="schedule.solutions">方案数</span>
-                        <span class="meta-value">${solutions.length}</span>
-                    </div>
-                    <div class="meta-item">
-                        <span class="meta-label">决策权重</span>
-                        <span class="meta-value" style="font-size: 13px;">
-                            CO₂: ${weights.w_co2 ?? '-'} / 时间: ${weights.w_time ?? '-'} / 成本: ${weights.w_cost ?? '-'}
-                        </span>
-                    </div>
-                </div>
-
-                ${bestSolution ? `
-                <div class="objectives-section mb-3">
-                    <div class="objectives-title">推荐方案目标函数表现</div>
-                    <div class="kpi-badges">
-                        <div class="kpi-badge kpi-co2">
-                            <i class="bi bi-cloud"></i>
-                            CO₂排放: ${i18n.formatNumber(bestSolution.co2, 2)} kg
-                        </div>
-                        <div class="kpi-badge kpi-time">
-                            <i class="bi bi-clock"></i>
-                            在港停留: ${i18n.formatNumber(bestSolution.stayTime, 2)} h
-                        </div>
-                        <div class="kpi-badge kpi-cost">
-                            <i class="bi bi-currency-dollar"></i>
-                            调度成本: ${i18n.formatNumber(bestSolution.cost, 2)} 元
-                        </div>
-                    </div>
-                </div>
-
-                ${solutions.length > 1 ? `
-                <div class="pareto-overview mb-3">
-                    <div class="objectives-title">全部Pareto方案对比</div>
-                    <div class="pareto-mini-table">
-                        <table class="table table-sm table-bordered mb-0">
-                            <thead>
-                                <tr>
-                                    <th>方案</th>
-                                    <th>CO₂排放 (kg)</th>
-                                    <th>在港停留 (h)</th>
-                                    <th>调度成本 (元)</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${solutions.map((sol, idx) => `
-                                    <tr class="${sol.isRecommended ? 'table-success' : ''}">
-                                        <td>
-                                            #${idx + 1}
-                                            ${sol.isRecommended ? '<span class="badge bg-success ms-1">推荐</span>' : ''}
-                                        </td>
-                                        <td>${i18n.formatNumber(sol.co2, 2)}</td>
-                                        <td>${i18n.formatNumber(sol.stayTime, 2)}</td>
-                                        <td>${i18n.formatNumber(sol.cost, 2)}</td>
-                                        <td>
-                                            <a href="/api/history/${item.id}/export?solution=${sol.id}"
-                                               class="btn btn-sm btn-outline-success" title="下载该方案Excel">
-                                                <i class="bi bi-file-earmark-excel"></i>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                ` : ''}
-                ` : ''}
-
-                <div class="history-actions mt-3">
-                    <button class="btn btn-sm btn-primary" onclick="viewDetail(${item.id})">
-                        <i class="bi bi-eye"></i>
-                        <span data-i18n="history.viewDetail">查看详情</span>
-                    </button>
-                    <a href="/api/history/${item.id}/export" class="btn btn-sm btn-success">
-                        <i class="bi bi-file-earmark-excel"></i>
-                        <span>下载推荐方案Excel</span>
-                    </a>
-                    <button class="btn btn-sm btn-danger" onclick="deleteHistory(${item.id})">
-                        <i class="bi bi-trash"></i>
-                        <span data-i18n="history.delete">删除</span>
-                    </button>
+        return `<article class="history-item">
+            <div class="history-item-top">
+                <div class="history-record-title"><div class="history-record-icon"><i class="bi bi-file-earmark-bar-graph"></i></div><div><h3>调度记录 #${escapeHistory(item.id)}</h3><p>${escapeHistory(historyDate(item.createdAt))} · ${item.shipsData?.length || 0} 艘船舶 · ${solutions.length} 个方案</p></div></div>
+                <span class="history-config-tag"><i class="bi bi-bounding-box"></i> ${escapeHistory(item.configName || '默认配置')}</span>
+            </div>
+            <p class="text-muted small">${best?.objectiveModel === 'physical-v2' ? '目标核算 physical-v2 · 含电网因子与成本拆解' : '历史口径 legacy-v1 · 指标请勿与新版直接比较'}</p>
+            ${best ? historyMetrics(best) : '<p class="text-muted small">该记录没有可用的方案指标。</p>'}
+            <div class="history-item-footer">
+                <div class="history-weights">${best ? '推荐方案 · ' : ''}决策权重：碳排放 ${historyNumber(weights.w_co2)} / 时间 ${historyNumber(weights.w_time)} / 成本 ${historyNumber(weights.w_cost)}</div>
+                <div class="history-actions">
+                    <button class="btn btn-sm btn-outline-primary" data-view-history="${escapeHistory(item.id)}"><i class="bi bi-eye"></i> 查看详情</button>
+                    ${best ? `<a href="${historyExportUrl(item.id)}" class="btn btn-sm btn-light"><i class="bi bi-download"></i> 导出推荐方案</a>` : ''}
+                    <button class="btn btn-sm btn-outline-danger" data-delete-history="${escapeHistory(item.id)}" title="删除这条调度记录" aria-label="删除调度记录 ${escapeHistory(item.id)}"><i class="bi bi-trash3"></i></button>
                 </div>
             </div>
-        `;
+            ${solutions.length > 1 ? `<details class="pareto-disclosure"><summary>展开全部 ${solutions.length} 个 Pareto 方案对比</summary><div class="table-responsive"><table class="table table-sm"><thead><tr><th>方案</th><th>CO₂ 排放（kg）</th><th>在港停留（h）</th><th>调度成本（元）</th><th>导出</th></tr></thead><tbody>${solutions.map((solution, index) => `<tr><td>#${index + 1} ${solution.isRecommended ? '<span class="status-pill is-active ms-2">推荐</span>' : ''}</td><td>${historyNumber(solution.co2)}</td><td>${historyNumber(solution.stayTime)}</td><td>${historyNumber(solution.cost)}</td><td><a href="${historyExportUrl(item.id, solution.id)}" class="btn btn-sm btn-light" title="导出方案 ${index + 1}" aria-label="导出方案 ${index + 1}"><i class="bi bi-download"></i></a></td></tr>`).join('')}</tbody></table></div></details>` : ''}
+        </article>`;
     }).join('');
-
-    i18n.updateDOM();
+    container.querySelectorAll('[data-view-history]').forEach(button => button.addEventListener('click', () => viewDetail(button.dataset.viewHistory)));
+    container.querySelectorAll('[data-delete-history]').forEach(button => button.addEventListener('click', () => deleteHistory(button.dataset.deleteHistory)));
 }
 
 async function viewDetail(historyId) {
+    const requestId = ++detailRequestId;
+    const content = document.getElementById('detailContent');
+    content.innerHTML = '<div class="page-empty"><div class="spinner-border spinner-border-sm" role="status"></div><p>正在读取调度详情…</p></div>';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('detailModal')).show();
     try {
-        const response = await fetch(`/api/history/${historyId}`);
-        if (!response.ok) throw new Error('Failed to load detail');
-
+        const response = await fetch(`/api/history/${encodeURIComponent(historyId)}`);
+        if (!response.ok) throw new Error('详情加载失败，请关闭后重试。');
         const data = await response.json();
-        const solutions = data.solutions || [];
-
-        const detailHTML = `
-            <div class="mb-4">
-                <h6>船舶列表</h6>
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th data-i18n="columns.ship_name">船舶</th>
-                            <th data-i18n="columns.length_of_ship">长度</th>
-                            <th data-i18n="columns.volume_of_goods">货量</th>
-                            <th data-i18n="columns.time_of_reachport">到港时间</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${(data.shipsData || []).map(ship => `
-                            <tr>
-                                <td>${ship.name}</td>
-                                <td>${ship.length} ${i18n.t('units.meter')}</td>
-                                <td>${ship.teu} ${i18n.t('units.teu')}</td>
-                                <td>${ship.arrivalTime}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-
-            <div>
-                <h6>Pareto方案 (共${solutions.length}个)</h6>
-                <div class="row">
-                    ${solutions.map((sol, idx) => `
-                        <div class="col-md-4 mb-3">
-                            <div class="card ${sol.isRecommended ? 'border-success' : ''}">
-                                <div class="card-body">
-                                    ${sol.isRecommended ? '<span class="badge bg-success mb-2">推荐</span>' : ''}
-                                    <h6>方案 ${idx + 1}</h6>
-                                    <p class="mb-1 small">CO₂: ${i18n.formatNumber(sol.co2, 2)} kg</p>
-                                    <p class="mb-1 small">在港停留: ${i18n.formatNumber(sol.stayTime, 2)} h</p>
-                                    <p class="mb-1 small">调度成本: ${i18n.formatNumber(sol.cost, 2)} 元</p>
-                                    <hr class="my-2">
-                                    <a href="/api/history/${historyId}/export?solution=${sol.id}"
-                                       class="btn btn-sm btn-outline-success w-100">
-                                        <i class="bi bi-download"></i> 下载Excel
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-
-        document.getElementById('detailContent').innerHTML = detailHTML;
-        i18n.updateDOM();
-
-        const modal = new bootstrap.Modal(document.getElementById('detailModal'));
-        modal.show();
+        if (requestId !== detailRequestId) return;
+        const solutions = Array.isArray(data.solutions) ? data.solutions : [];
+        const ships = Array.isArray(data.shipsData) ? data.shipsData : [];
+        content.innerHTML = `<div class="detail-summary"><span>调度记录 #${escapeHistory(data.id)} · ${escapeHistory(historyDate(data.createdAt))}</span><span>${escapeHistory(data.configName || '默认配置')}</span></div>
+            <h6 class="detail-section-heading">参与调度的船舶 <span class="count-pill ms-2">${ships.length}</span></h6>
+            <div class="table-responsive"><table class="table table-sm"><thead><tr><th>船舶名称</th><th>船舶长度（m）</th><th>货量（TEU）</th><th>预计到港</th></tr></thead><tbody>${ships.length ? ships.map(ship => `<tr><td>${escapeHistory(ship.name)}</td><td>${historyNumber(ship.length, 1)}</td><td>${historyNumber(ship.teu, 0)}</td><td>${escapeHistory(ship.arrivalTime ?? '—')}</td></tr>`).join('') : '<tr><td colspan="4" class="text-center text-muted py-4">暂无船舶数据</td></tr>'}</tbody></table></div>
+            <h6 class="detail-section-heading">Pareto 方案 <span class="count-pill ms-2">${solutions.length}</span></h6>
+            <div class="detail-solutions">${solutions.map((solution, index) => `<div class="detail-solution ${solution.isRecommended ? 'is-recommended' : ''}"><div class="detail-solution-title"><h6>方案 ${String(index + 1).padStart(2, '0')}</h6>${solution.isRecommended ? '<span class="status-pill is-active">推荐方案</span>' : ''}</div><dl><dt>CO₂ 排放</dt><dd>${historyNumber(solution.co2)} kg</dd><dt>在港停留</dt><dd>${historyNumber(solution.stayTime)} h</dd><dt>调度成本</dt><dd>${historyNumber(solution.cost)} 元</dd></dl><a href="${historyExportUrl(historyId, solution.id)}" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-download"></i> 下载 Excel 方案</a></div>`).join('')}</div>
+            ${solutions.length ? '' : '<p class="text-muted small">该记录暂无可用方案。</p>'}`;
     } catch (error) {
-        console.error('Error viewing detail:', error);
-        alert(i18n.t('messages.networkError'));
+        if (requestId !== detailRequestId) return;
+        content.innerHTML = `<div class="page-empty"><i class="bi bi-exclamation-circle"></i><h3>暂时无法读取详情</h3><p>${escapeHistory(error.message || '请稍后重试。')}</p></div>`;
     }
 }
 
 async function deleteHistory(historyId) {
-    if (!confirm(i18n.t('messages.confirmDelete'))) {
-        return;
-    }
-
+    if (deletingHistoryIds.has(String(historyId))) return;
+    if (!confirm('确定删除这条调度记录吗？记录及其方案将无法恢复。')) return;
+    deletingHistoryIds.add(String(historyId));
     try {
-        const response = await fetch(`/api/history/${historyId}`, {
-            method: 'DELETE'
-        });
-
+        const response = await fetch(`/api/history/${encodeURIComponent(historyId)}`, {method: 'DELETE'});
         const result = await response.json();
-
-        if (result.success) {
-            alert(i18n.t('messages.deleteSuccess'));
-            loadHistory();
-        } else {
-            alert(result.error || i18n.t('messages.deleteError'));
-        }
+        if (!response.ok || !result.success) throw new Error(result.error || '删除失败，请稍后重试。');
+        await loadHistory();
+        historyNotice('调度记录已删除。', 'success');
     } catch (error) {
-        console.error('Error deleting history:', error);
-        alert(i18n.t('messages.networkError'));
+        historyNotice(error.message || '网络连接异常，请稍后重试。');
+    } finally {
+        deletingHistoryIds.delete(String(historyId));
     }
 }
 
@@ -241,5 +164,10 @@ function resetFilters() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('historyFilterForm').addEventListener('submit', event => {
+        event.preventDefault();
+        loadHistory();
+    });
     loadHistory();
 });
+window.addEventListener('localeChanged', () => { if (historyLoaded) renderHistory(); });

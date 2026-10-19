@@ -12,6 +12,8 @@ from flask_cors import CORS
 from flask_login import login_user, logout_user, login_required, current_user
 from models import db, User, PortConfiguration, Ship, ScheduleHistory
 from auth import login_manager, register_user, authenticate_user
+from scheduling_objectives import (MODEL_VERSION, DEFAULT_PARAMETERS, validate_parameters,
+                                   objective_breakdown, preference_scores)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -31,6 +33,7 @@ with app.app_context():
 
 
 class PortConfig:
+    OBJECTIVE_PARAMETERS = dict(DEFAULT_PARAMETERS)
     TOTAL_BERTHS = 10
     BERTH_LENGTHS = [350]*10
     BERTH_NAMES = [f"B{i:02d}" for i in range(1, 11)]
@@ -107,6 +110,7 @@ def load_active_port_config(user_id=None):
         except Exception:
             config = None
 
+    PortConfig.OBJECTIVE_PARAMETERS = dict(DEFAULT_PARAMETERS)
     if config is None:
         reset_port_config()
         return None
@@ -362,10 +366,10 @@ def repair_qc_conflict(position, vessels):
     repaired_pos[num_vessels: 2 * num_vessels] = repaired_berthing
     repaired_pos[3 * num_vessels: 4 * num_vessels] = repaired_qc_starts
 
-    # 基于修复结果直接计算离泊时间和惩罚
-    departures = repaired_berthing + handling_times
-    new_penalty = calculate_penalty(num_vessels, berths, repaired_berthing, departures,
-                                    repaired_qc_starts, assigned_qcs, PortConfig.TOTAL_QCS)
+    # Revalidate the encoded candidate, including the existing 36-hour raw-time clipping.
+    # This changes no constraint; it prevents a pre-encoding penalty from labeling another schedule.
+    rb, rt, rq, rs, rd = decode_solution(repaired_pos, vessels)
+    new_penalty = calculate_penalty(num_vessels, rb, rt, rd, rs, rq, PortConfig.TOTAL_QCS)
 
     return repaired_pos, new_penalty
 
@@ -373,19 +377,9 @@ def calculate_objectives(position, vessels):
     berths, berthing_times, assigned_qcs, qc_start_idx, departures = decode_solution(position, vessels)
     num_vessels = len(vessels)
     penalty = calculate_penalty(num_vessels, berths, berthing_times, departures, qc_start_idx, assigned_qcs, PortConfig.TOTAL_QCS)
-    f1_emission, f2_money = 0, 0
-    for i in range(num_vessels):
-        wait_time = berthing_times[i] - vessels[i]['eta']
-        handling_time = departures[i] - berthing_times[i]
-        f1_emission += (wait_time * PortConfig.co2_emission_factor * vessels[i]['auv1'] * vessels[i]['auv2'] * vessels[i]['auv3'] + 
-                        handling_time * assigned_qcs[i] * PortConfig.perQcPow * PortConfig.qc_load_factor)
-        f2_money += (wait_time * assigned_qcs[i] * PortConfig.qc_money + wait_time * PortConfig.auv_money * vessels[i]['workload'])
-    f3_stay_time = sum([departures[i] - vessels[i]['eta'] for i in range(num_vessels)])
-    return np.array([
-        f1_emission + penalty * 10, 
-        f3_stay_time + penalty * 10, 
-        f2_money + penalty * 10
-    ]), penalty
+    objectives, _, _ = objective_breakdown(vessels, berthing_times, departures, assigned_qcs, PortConfig)
+    return objectives, penalty
+
 def dominates(obj1, obj2):
     return np.all(obj1 <= obj2) and np.any(obj1 < obj2)
 def fast_non_dominated_sort_cdp(objs, penalties):
@@ -502,6 +496,18 @@ def nsga2_solver(vessels, max_iter=200, pop_size=100):
         qc_starts[berth_order] = qc_starts_by_rank
         pop[i, 3 * num_vessels:4 * num_vessels] = qc_starts
 
+    # Two feasible anchors use disjoint, permanently ordered QC segments.
+    # The berth decoder serializes ships on each berth; no constraint is relaxed.
+    for anchor, qc_count in enumerate((PortConfig.MAX_QC_PER_VESSEL, 1)):
+        if anchor >= pop_size:
+            break
+        active_berths = min(PortConfig.TOTAL_BERTHS, PortConfig.TOTAL_QCS // qc_count)
+        anchor_berths = np.arange(num_vessels) % active_berths
+        pop[anchor, :num_vessels] = anchor_berths
+        pop[anchor, num_vessels:2 * num_vessels] = etas
+        pop[anchor, 2 * num_vessels:3 * num_vessels] = qc_count
+        pop[anchor, 3 * num_vessels:] = anchor_berths * qc_count + 1
+
     eval_results = [calculate_objectives(p, vessels) for p in pop]
     objs = np.array([res[0] for res in eval_results])
     penalties = np.array([res[1] for res in eval_results])
@@ -510,7 +516,7 @@ def nsga2_solver(vessels, max_iter=200, pop_size=100):
     for i in range(pop_size):
         if penalties[i] > 0:
             repaired_pos, new_penalty = repair_qc_conflict(pop[i], vessels)
-            new_objs, _ = calculate_objectives(repaired_pos, vessels)
+            new_objs, new_penalty = calculate_objectives(repaired_pos, vessels)
             pop[i] = repaired_pos
             objs[i] = new_objs
             penalties[i] = new_penalty
@@ -582,7 +588,7 @@ def nsga2_solver(vessels, max_iter=200, pop_size=100):
             for idx in repair_indices:
                 original_pos = combined_pop[idx]
                 repaired_pos, new_penalty = repair_qc_conflict(original_pos, vessels)
-                new_objs, _ = calculate_objectives(repaired_pos, vessels)
+                new_objs, new_penalty = calculate_objectives(repaired_pos, vessels)
                 combined_pop[idx] = repaired_pos
                 combined_objs[idx] = new_objs
                 combined_penalties[idx] = new_penalty
@@ -924,6 +930,13 @@ def schedule():
         w_cost = float(req_data.get('w_cost', 0.3))
         pop_size = int(req_data.get('pop_size', 60))
         max_iter = int(req_data.get('max_iter', 200))
+        if not (4 <= pop_size <= 500 and 1 <= max_iter <= 2000):
+            return jsonify({'error': '种群数量须为 4–500，迭代次数须为 1–2000'}), 400
+        try:
+            PortConfig.OBJECTIVE_PARAMETERS = validate_parameters(req_data.get('objectiveParameters'))
+            preference_scores([[0, 0, 0]], [w_co2, w_time, w_cost])
+        except ValueError as error:
+            return jsonify({'error': str(error)}), 400
 
         vessels = []
         for s in ships:
@@ -936,35 +949,29 @@ def schedule():
         objs, positions, penalties = nsga2_solver(vessels, max_iter=max_iter, pop_size=pop_size)
 
         feasible = penalties == 0
-        valid_objs = objs[feasible] if np.any(feasible) else objs
-        valid_pos = positions[feasible] if np.any(feasible) else positions
+        if not np.any(feasible):
+            return jsonify({'error': '本次搜索未找到满足全部约束的方案，请增加种群或迭代次数后重试。',
+                            'minimumPenalty': float(np.min(penalties))}), 422
+        valid_objs, valid_pos = objs[feasible], positions[feasible]
 
         _, u_idx = np.unique(np.round(valid_objs, 1), axis=0, return_index=True)
         u_objs, u_pos = valid_objs[u_idx], valid_pos[u_idx]
 
-        pref = np.array([w_co2, w_time, w_cost], dtype=float)
-        pref_sum = pref.sum()
-        pref = pref / pref_sum if pref_sum > 0 else np.array([1 / 3, 1 / 3, 1 / 3])
-        # 权重为 0 时不能直接做除数，兜底一个极小值代表"几乎不关心该目标"
-        pref = np.clip(pref, 1e-3, None)
-        f_min, f_max = u_objs.min(axis=0), u_objs.max(axis=0)
-        norm = (u_objs - f_min) / (f_max - f_min + 1e-6)
-        best_idx = int(np.argmin(np.sqrt(np.sum((norm / pref) ** 2, axis=1))))
+        scores, normalized, pref = preference_scores(u_objs, [w_co2, w_time, w_cost])
+        best_idx = int(np.argmin(scores))
 
         pareto_solutions = []
         for idx in range(len(u_objs)):
             berths, b_times, qcs, qc_starts, departures = decode_solution(u_pos[idx], vessels)
+            _, components, totals = objective_breakdown(vessels, b_times, departures, qcs, PortConfig)
             asgs = []
             for i, v in enumerate(vessels):
                 berth_idx = int(berths[i])
                 wait_h = float(b_times[i] - v['eta'])
                 work_h = float(departures[i] - b_times[i])
                 stay_h = float(departures[i] - v['eta'])
-                # 单船指标拆解：等待期靠辅机供电，作业期靠岸桥耗电
-                ship_co2 = (wait_h * PortConfig.co2_emission_factor * v['auv1'] * v['auv2'] * v['auv3']
-                            + work_h * int(qcs[i]) * PortConfig.perQcPow * PortConfig.qc_load_factor)
-                ship_cost = (wait_h * int(qcs[i]) * PortConfig.qc_money
-                             + wait_h * PortConfig.auv_money * v['workload'])
+                ship_co2 = components[i]['co2']
+                ship_cost = components[i]['cost']
                 asgs.append({
                     "shipId": v['id'], "shipName": v['name'], "length": v['len'],
                     "teu": v['workload'],
@@ -983,7 +990,8 @@ def schedule():
                     "workTimeMin": int(round(work_h * 60)),
                     "stayTimeMin": int(round(stay_h * 60)),
                     "shipCo2": round(ship_co2, 2),
-                    "shipCost": round(ship_cost, 2)
+                    "shipCost": round(ship_cost, 2),
+                    "objectiveBreakdown": {k: round(v, 6) for k, v in components[i].items()}
                 })
 
             total_wait = sum(a['waitTimeMin'] for a in asgs) / 60.0
@@ -994,6 +1002,15 @@ def schedule():
                 "stayTime": round(float(u_objs[idx][1]), 2),
                 "cost": round(float(u_objs[idx][2]), 2),
                 "isRecommended": (idx == best_idx),
+                "objectiveModel": MODEL_VERSION,
+                "objectiveParameters": dict(PortConfig.OBJECTIVE_PARAMETERS),
+                "accountingConfig": {key: getattr(PortConfig, key) for key in
+                                     ('perQcPow', 'qc_load_factor', 'auv_money', 'qc_money', 'co2_emission_factor')},
+                "objectiveBreakdown": {k: round(v, 6) for k, v in totals.items()},
+                "recommendation": {"method": "weighted-ideal-distance", "score": float(scores[idx]),
+                                   "normalizedObjectives": normalized[idx].tolist(), "weights": pref.tolist()},
+                "isFeasible": True,
+                "constraintPenalty": 0.0,
                 "metrics": {
                     "shipCount": len(asgs),
                     "totalWaitHours": round(total_wait, 2),
@@ -1122,6 +1139,10 @@ def build_schedule_workbook(history, solution):
         ('调度记录编号', history.id),
         ('生成时间', history.created_at.strftime('%Y-%m-%d %H:%M:%S')),
         ('方案编号', f"策略 #{int(solution.get('id', 0)) + 1}"),
+        ('目标函数版本', solution.get('objectiveModel', 'legacy-v1（旧口径，不宜直接比较）')),
+        ('核算参数', json.dumps(solution.get('objectiveParameters', {}), ensure_ascii=False)),
+        ('成本与能源配置', json.dumps(solution.get('accountingConfig', {}), ensure_ascii=False)),
+        ('目标拆解', json.dumps(solution.get('objectiveBreakdown', {}), ensure_ascii=False)),
         ('是否系统推荐', '是' if solution.get('isRecommended') else '否'),
         ('目标一 · 碳排放总量(kg)', solution.get('co2')),
         ('目标二 · 总在港停留(小时)', solution.get('stayTime')),

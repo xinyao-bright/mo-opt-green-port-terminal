@@ -4,30 +4,46 @@ let currentPortConfig = null;
 
 function alertMsg(text, isError = false) {
     const alertBox = document.createElement('div');
-    alertBox.className = `alert ${isError ? 'alert-danger' : 'alert-success'} position-fixed`;
-    alertBox.style.cssText = 'top: 25px; right: 25px; z-index: 99999; font-size:0.85rem; box-shadow:0 4px 12px rgba(0,0,0,0.3); max-width: 400px;';
-    alertBox.innerText = text;
+    alertBox.className = 'alert app-toast ' + (isError ? 'alert-danger' : 'alert-success');
+    alertBox.setAttribute('role', isError ? 'alert' : 'status');
+    alertBox.textContent = text;
     document.body.appendChild(alertBox);
-    setTimeout(() => alertBox.remove(), 3500);
+    setTimeout(() => alertBox.remove(), 5000);
 }
 
+let shipPool = [];
+let resultsSnapshot = {};
+function resetResults() {
+    currentSolutions = [];
+    activeSolutionId = null;
+    for (const [id, html] of Object.entries(resultsSnapshot)) document.getElementById(id).innerHTML = html;
+    document.getElementById('metricsCard').style.display = 'none';
+    document.getElementById('exportResultBtn').disabled = true;
+}
+function renderShipPool() {
+    const box = document.getElementById('shipBox');
+    const query = document.getElementById('shipSearch').value.trim().toLocaleLowerCase();
+    const ships = shipPool.filter(s => String(s.name).toLocaleLowerCase().includes(query));
+    document.getElementById('shipCountBadge').textContent = shipPool.length + ' 艘';
+    document.getElementById('workspaceStatus').textContent = shipPool.length ? '调度就绪 · ' + shipPool.length + ' 艘船舶' : '等待船舶数据';
+    if (!ships.length) {
+        box.innerHTML = '<div class="empty-state compact-empty"><span class="empty-icon"><i class="bi bi-box-seam"></i></span><strong>' + (query ? '未找到匹配船舶' : '船舶池为空') + '</strong><p>' + (query ? '尝试其他名称或清除搜索条件' : '导入数据，开始规划本次调度') + '</p></div>';
+        return;
+    }
+    box.innerHTML = ships.map(s => `<div class="ship-mini-card"><span class="ship-mini-icon"><i class="bi bi-box-seam"></i></span><div class="ship-mini-info"><strong class="ship-mini-name" title="${escapeHTML(s.name)}">${escapeHTML(s.name)}</strong><div class="ship-mini-meta">${escapeHTML(s.teu)} TEU <span>·</span> ${escapeHTML(s.length)} m</div></div><div class="ship-mini-arrival"><small>ETA</small>${escapeHTML(s.arrivalTime)}</div></div>`).join('');
+}
 async function refreshShipPool() {
     try {
         const res = await fetch('/api/ships');
+        if (!res.ok || res.redirected) throw new Error('船舶数据加载失败，请重新登录或刷新页面');
         const data = await res.json();
-        const box = document.getElementById('shipBox');
-        if (!data.length) {
-            box.innerHTML = `<div class="text-center py-4 text-muted fs-7" data-i18n="common.noData">${i18n ? i18n.t('common.noData') : '暂无数据'}</div>`;
-            return;
-        }
-        box.innerHTML = data.map(s => `
-            <div class="ship-mini-card">
-                <div class="d-flex justify-content-between text-sm fw-bold"><span>${s.name}</span><span class="text-primary">${s.length}m</span></div>
-                <div class="d-flex justify-content-between text-xs text-muted mt-1"><span>${i18n ? i18n.t('columns.volume_of_goods') : '货量'}: ${s.teu} TEU</span><span>ETA: ${s.arrivalTime}</span></div>
-            </div>
-        `).join('');
+        if (JSON.stringify(data) !== JSON.stringify(shipPool) && currentSolutions.length) resetResults();
+        shipPool = data;
+        renderShipPool();
     } catch (e) {
-        console.error(e);
+        document.getElementById('shipBox').innerHTML = '<div class="empty-state compact-empty"><strong>船舶加载失败</strong><p>请检查连接后刷新页面重试</p></div>';
+        document.getElementById('workspaceStatus').textContent = '数据连接异常';
+        alertMsg(e.message, true);
     }
 }
 
@@ -199,9 +215,10 @@ async function openFileImportModal() {
     try {
         const text = await file.text();
         const parsedRows = parseCSVText(text.replace(/^﻿/, ''));
-        const columns = parsedRows[0]?.filter(Boolean) || [];
+        const columns = (parsedRows[0] || []).map((column, index) => column || (index === 0 ? 'name' : 'column_' + (index + 1)));
         if (!columns.length) throw new Error('未读取到 CSV 表头，请检查文件格式');
         const rows = parsedRows.slice(1).filter(row => row.some(v => v !== ''));
+        if (rows.some(row => row.length !== columns.length)) throw new Error('CSV 数据行与表头列数不一致，请检查文件格式');
         renderImportEditor({ columns, rows, file, mode: 'file' });
         ensureImportEditorModal().show();
     } catch (err) { alertMsg(err.message || 'CSV 文件解析失败', true); }
@@ -268,8 +285,8 @@ async function submitManualShips() {
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || '导入失败');
         alertMsg(result.message || '船舶数据已成功导入');
+        await refreshShipPool();
         bootstrap.Modal.getOrCreateInstance(document.getElementById('manualInputModal')).hide();
-        refreshShipPool();
     } catch (err) {
         alertMsg(err.message, true);
     }
@@ -293,26 +310,31 @@ async function submitImportEditorCSV() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '数据导入失败');
         alertMsg(data.message || '船舶数据已导入');
+        await refreshShipPool();
         bootstrap.Modal.getOrCreateInstance(document.getElementById('importEditorModal')).hide();
         document.getElementById('csvFile').value = '';
         updateSelectedFileInfo();
-        refreshShipPool();
     } catch (err) { alertMsg(err.message, true); }
 }
 
 async function uploadCSV() { await openFileImportModal(); }
 
 async function clearPool() {
-    const res = await fetch('/api/ships/clear', { method: 'POST' });
-    const data = await res.json();
-    alertMsg(data.message);
-    refreshShipPool();
+    if (!shipPool.length) { alertMsg('船舶池已为空'); return; }
+    if (!confirm('确定清空当前待调度船舶？已保存的历史方案仍会保留。')) return;
+    try {
+        const res = await fetch('/api/ships/clear', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '清空失败');
+        alertMsg(data.message);
+        await refreshShipPool();
+    } catch (error) { alertMsg(error.message, true); }
 }
 
 async function loadBerthConfigOverview() {
     try {
         const res = await fetch('/api/port-config');
-        if (!res.ok) return;
+        if (!res.ok || res.redirected) throw new Error('配置加载失败');
         const configs = await res.json();
         const activeConfig = configs.find(c => c.isActive);
 
@@ -328,7 +350,7 @@ async function loadBerthConfigOverview() {
             document.getElementById('configStatus').textContent = '默认配置';
         }
     } catch (e) {
-        console.error('Failed to load berth config:', e);
+        document.getElementById('configStatus').textContent = '配置加载失败';
     }
 }
 
@@ -399,76 +421,65 @@ function estimateTime(popSize, maxIter, shipCount) {
 // NSGA-II 调度运行
 // ============================================================
 async function executeNSGA() {
-    const runBtn = document.getElementById('runBtn');
-    runBtn.disabled = true;
-    runBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> 进化演算中...';
-
-    const popSize = parseInt(document.getElementById('popSize').value) || 60;
-    const maxIter = parseInt(document.getElementById('maxIter').value) || 200;
-
+    if (!shipPool.length) { alertMsg('请先导入至少一艘船舶，再开始调度', true); return; }
+    const popInput = document.getElementById('popSize');
+    const iterInput = document.getElementById('maxIter');
+    if (!popInput.reportValidity() || !iterInput.reportValidity()) return;
     const payload = {
-        w_co2: parseFloat(document.getElementById('wCo2').value),
-        w_time: parseFloat(document.getElementById('wTime').value),
-        w_cost: parseFloat(document.getElementById('wCost').value),
-        pop_size: popSize,
-        max_iter: maxIter
+        w_co2: Number(document.getElementById('wCo2').value),
+        w_time: Number(document.getElementById('wTime').value),
+        w_cost: Number(document.getElementById('wCost').value),
+        pop_size: Number(popInput.value),
+        max_iter: Number(iterInput.value),
+        objectiveParameters: {
+            gridEmissionFactor: Number(document.getElementById('gridFactor').value),
+            electricityPrice: Number(document.getElementById('electricityPrice').value),
+            qcCoordinationCost: Number(document.getElementById('coordinationCost').value),
+            serviceAuxRatio: Number(document.getElementById('serviceAuxRatio').value)
+        }
     };
-
+    if (!payload.pop_size || !payload.max_iter) { alertMsg('请填写种群数量与迭代次数', true); return; }
+    if (payload.w_co2 + payload.w_time + payload.w_cost <= 0) { alertMsg('请至少为一个优化目标设置大于 0 的权重', true); return; }
+    if (['gridFactor','electricityPrice','coordinationCost','serviceAuxRatio'].some(id => !document.getElementById(id).reportValidity())) return;
+    const runBtn = document.getElementById('runBtn');
     const progressDiv = document.getElementById('runProgress');
     const progressBar = document.getElementById('runProgressBar');
     const progressText = document.getElementById('runProgressText');
+    runBtn.disabled = true;
+    runBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> 正在生成方案';
     progressDiv.style.display = '';
-
-    let shipCount = 1;
-    try {
-        const shipRes = await fetch('/api/ships');
-        const shipData = await shipRes.json();
-        shipCount = shipData.length || 1;
-    } catch (e) {}
-
-    const estMs =0.15 * popSize * maxIter * Math.max(1, shipCount);
-    const estSeconds = Math.max(3, Math.round(estMs / 200));
-    const estLabel = estimateTime(popSize, maxIter, shipCount);
-    progressText.textContent = `预计耗时 ${estLabel}，请稍候...`;
-
+    progressBar.style.width = '15%';
+    progressText.textContent = '正在计算，请稍候（此进度为估算）';
+    document.getElementById('workspaceStatus').textContent = '正在优化调度方案';
     const startTime = Date.now();
     const progressInterval = setInterval(() => {
-        const elapsed = (Date.now() - startTime) / 1000;
-        const pct = Math.min(95, (elapsed / estSeconds) * 100);
-        progressBar.style.width = pct + '%';
-        const remaining = Math.max(0, estSeconds - Math.round(elapsed));
-        if (remaining > 0) {
-            progressText.textContent = `演算进行中... 预计剩余 ${remaining} 秒`;
-        } else {
-            progressText.textContent = '即将完成，正在整理结果...';
-        }
-    }, 500);
-
+        const elapsed = Math.round((Date.now() - startTime) / 1000);
+        progressBar.style.width = Math.min(90, 15 + 60 * (1 - Math.exp(-elapsed / 20))) + '%';
+        progressText.textContent = '已计算 ' + elapsed + ' 秒 · 正在搜索更优方案';
+    }, 700);
+    let succeeded = false;
     try {
-        const res = await fetch('/api/schedule', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        const res = await fetch('/api/schedule', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (res.redirected) throw new Error('登录已过期，请重新登录');
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
-
-        currentSolutions = data.solutions;
+        if (!res.ok) throw new Error(data.error || '调度计算失败');
+        currentSolutions = data.solutions || [];
         currentPortConfig = data.portConfig || null;
-        alertMsg(data.info);
-
         renderParetoGrid();
         const recommended = currentSolutions.find(s => s.isRecommended) || currentSolutions[0];
         if (recommended) mountSolution(recommended.id);
+        succeeded = true;
+        alertMsg(data.info || '调度方案已生成');
+        document.getElementById('workspaceStatus').textContent = '已生成 ' + currentSolutions.length + ' 个调度方案';
     } catch (err) {
         alertMsg(err.message, true);
+        document.getElementById('workspaceStatus').textContent = '调度未完成 · 可重试';
     } finally {
         clearInterval(progressInterval);
-        progressBar.style.width = '100%';
-        progressText.textContent = '计算完成';
-        setTimeout(() => { progressDiv.style.display = 'none'; progressBar.style.width = '0%'; }, 2000);
+        progressBar.style.width = succeeded ? '100%' : '0%';
+        progressText.textContent = succeeded ? '计算完成，已选择推荐方案' : '本次计算未完成，请检查提示后重试';
         runBtn.disabled = false;
-        runBtn.innerHTML = '<i class="bi bi-lightning-charge-fill"></i> <span data-i18n="schedule.runAlgorithm">启动多目标寻优演化</span>';
+        runBtn.innerHTML = '<i class="bi bi-play-fill"></i> 开始智能调度';
     }
 }
 
@@ -477,33 +488,9 @@ async function executeNSGA() {
 // ============================================================
 function renderParetoGrid() {
     const row = document.getElementById('paretoRow');
-    const badge = document.getElementById('paretoCountBadge');
-    if (!currentSolutions.length) {
-        row.innerHTML = '<div class="text-muted text-center w-100 py-4">未检索到边界非支配解</div>';
-        badge.textContent = '0 个方案';
-        return;
-    }
-    badge.textContent = `${currentSolutions.length} 个方案`;
-
-    row.innerHTML = currentSolutions.map(s => `
-        <div class="pareto-card ${s.isRecommended ? 'recommended' : ''}" id="pcard-${s.id}" onclick="mountSolution(${s.id})">
-            <div class="pareto-card-title">策略 #${s.id + 1}</div>
-            <div class="pareto-card-metrics">
-                <div class="pareto-metric-row">
-                    <span class="pareto-metric-label">CO₂排放</span>
-                    <span class="pareto-metric-value co2">${s.co2.toFixed(1)} kg</span>
-                </div>
-                <div class="pareto-metric-row">
-                    <span class="pareto-metric-label">在港停留</span>
-                    <span class="pareto-metric-value time">${s.stayTime.toFixed(2)} h</span>
-                </div>
-                <div class="pareto-metric-row">
-                    <span class="pareto-metric-label">调度成本</span>
-                    <span class="pareto-metric-value cost">¥${s.cost.toFixed(0)}</span>
-                </div>
-            </div>
-        </div>
-    `).join('');
+    document.getElementById('paretoCountBadge').textContent = currentSolutions.length + ' 个方案';
+    if (!currentSolutions.length) { row.innerHTML = '<div class="solution-empty">未找到可用方案，请检查船舶与泊位配置。</div>'; return; }
+    row.innerHTML = currentSolutions.map(s => `<button type="button" class="pareto-card ${s.isRecommended ? 'recommended' : ''}" id="pcard-${s.id}" onclick="mountSolution(${s.id})" aria-pressed="false"><div class="pareto-card-title">方案 ${String(s.id + 1).padStart(2,'0')}${s.isRecommended ? '<span class="recommend-tag">推荐</span>' : ''}<span class="solution-radio"></span></div><div class="pareto-card-metrics"><div class="pareto-metric-row"><span class="pareto-metric-label">碳排放</span><span class="pareto-metric-value co2">${s.co2.toLocaleString(undefined,{maximumFractionDigits:1})} kg</span></div><div class="pareto-metric-row"><span class="pareto-metric-label">在港时间</span><span class="pareto-metric-value">${s.stayTime.toFixed(2)} h</span></div><div class="pareto-metric-row"><span class="pareto-metric-label">调度成本</span><span class="pareto-metric-value">¥ ${s.cost.toLocaleString(undefined,{maximumFractionDigits:0})}</span></div></div></button>`).join('');
 }
 
 // ============================================================
@@ -511,18 +498,31 @@ function renderParetoGrid() {
 // ============================================================
 function mountSolution(id) {
     activeSolutionId = id;
-    document.querySelectorAll('.pareto-card').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.pareto-card').forEach(c => { c.classList.remove('active'); c.setAttribute('aria-pressed','false'); });
     const card = document.getElementById(`pcard-${id}`);
-    if (card) card.classList.add('active');
+    if (card) { card.classList.add('active'); card.setAttribute('aria-pressed','true'); }
 
     const sol = currentSolutions.find(s => s.id === id);
     if (!sol) return;
 
-    document.getElementById('kpiCo2').innerHTML = `${sol.co2.toLocaleString()} <span class="fs-6">kg</span>`;
-    document.getElementById('kpiTime').innerHTML = `${sol.stayTime.toFixed(2)} <span class="fs-6">小时</span>`;
-    document.getElementById('kpiCost').innerHTML = `¥${sol.cost.toLocaleString()} <span class="fs-6">元</span>`;
-    document.getElementById('activeSolTag').innerText = `当前: 策略 #${id + 1}${sol.isRecommended ? ' (推荐)' : ''}`;
+    const setMetric = (id, value, unit) => {
+        const element = document.getElementById(id);
+        const large = Math.abs(value) >= 10000;
+        const display = (large ? value / 10000 : value).toLocaleString('zh-CN', {maximumFractionDigits:2});
+        element.innerHTML = display + ' <span>' + (large ? '万 ' : '') + unit + '</span>';
+        element.title = value.toLocaleString('zh-CN', {maximumFractionDigits:2}) + ' ' + unit;
+        element.setAttribute('aria-label', element.title);
+    };
+    setMetric('kpiCo2', sol.co2, 'kg');
+    setMetric('kpiTime', sol.stayTime, '小时');
+    setMetric('kpiCost', sol.cost, '元');
+    document.getElementById('activeSolTag').textContent = '当前方案 ' + String(id + 1).padStart(2,'0') + (sol.isRecommended ? ' · 推荐' : '');
 
+    document.getElementById('exportResultBtn').disabled = false;
+    const breakdown = sol.objectiveBreakdown || {};
+    const number = value => Number(value || 0).toLocaleString('zh-CN', {maximumFractionDigits: 2});
+    document.getElementById('objectiveExplanation').style.display = '';
+    document.getElementById('objectiveExplanationBody').innerHTML = `<p>碳排放 = 等待辅机 <strong>${number(breakdown.waitingCarbon)}</strong> + 作业辅机 <strong>${number(breakdown.serviceCarbon)}</strong> + 岸桥用电间接排放 <strong>${number(breakdown.electricityCarbon)}</strong> kg CO₂。</p><p>成本 = 货物等待 <strong>${number(breakdown.waitingCost)}</strong> + 岸桥运行 <strong>${number(breakdown.qcOperatingCost)}</strong> + 电费 <strong>${number(breakdown.electricityCost)}</strong> + 多机协同 <strong>${number(breakdown.coordinationCost)}</strong> 元。</p><p class="settings-caption">推荐依据：三目标在本次候选集内归一化后，计算加权理想点距离（越小越优），当前得分 ${number(sol.recommendation?.score)}。仅返回通过约束校验的方案。核算边界为辅机与岸桥，非全港碳盘查；演示单价需校准。</p>`;
     renderMetrics(sol);
     renderGantt(sol.assignments);
     renderDetailTable(sol.assignments);
@@ -561,75 +561,34 @@ function renderMetrics(sol) {
 // ============================================================
 function renderGantt(assignments) {
     const container = document.getElementById('ganttContainer');
-    if (!assignments || !assignments.length) {
-        container.innerHTML = '<div class="text-muted text-center py-4">无分配数据</div>';
-        return;
+    if (!assignments || !assignments.length) { container.innerHTML = '<div class="empty-state">暂无泊位分配</div>'; return; }
+    const berthMap = new Map();
+    assignments.forEach(a => { const key = a.berthName || 'B' + a.berthIndex; if (!berthMap.has(key)) berthMap.set(key, []); berthMap.get(key).push(a); });
+    const berths = [...berthMap.keys()].sort((a,b) => a.localeCompare(b, undefined, { numeric:true }));
+    const minTime = Math.floor(Math.min(...assignments.map(a => a.startHours)));
+    const maxTime = Math.ceil(Math.max(...assignments.map(a => a.endHours)));
+    const timeSpan = Math.max(1, maxTime - minTime);
+    const colors = Array.from({length:8}, (_, index) => 'var(--gantt-color-' + (index + 1) + ')');
+    let html = '<div class="gantt-chart"><div class="gantt-header"><div class="gantt-berth-label">泊位 / 时间</div><div class="gantt-timeline">';
+    for (let i = 0; i <= 5; i++) {
+        const time = minTime + timeSpan * i / 5;
+        const minutes = Math.round(time * 60);
+        const hour = Math.floor(minutes / 60);
+        const label = (hour >= 24 ? '+' + Math.floor(hour / 24) + 'd ' : '') + String(hour % 24).padStart(2,'0') + ':' + String(minutes % 60).padStart(2,'0');
+        html += '<span style="left:' + i * 20 + '%">' + label + '</span>';
     }
-
-    const berthMap = {};
-    assignments.forEach(a => {
-        const key = a.berthName || `B${String(a.berthIndex).padStart(2, '0')}`;
-        if (!berthMap[key]) berthMap[key] = [];
-        berthMap[key].push(a);
-    });
-
-    const berths = Object.keys(berthMap).sort((a, b) => {
-        const na = parseInt(a.replace(/\D/g, '')) || 0;
-        const nb = parseInt(b.replace(/\D/g, '')) || 0;
-        return na - nb;
-    });
-
-    const allStarts = assignments.map(a => a.startHours);
-    const allEnds = assignments.map(a => a.endHours);
-    const minTime = Math.floor(Math.min(...allStarts));
-    const maxTime = Math.ceil(Math.max(...allEnds)) + 0.5;
-    const timeSpan = maxTime - minTime || 1;
-
-    const COLORS = [
-        '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-        '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#6366f1',
-        '#84cc16', '#a855f7', '#22d3ee', '#fb923c', '#4ade80'
-    ];
-
-    const timeLabels = [];
-    for (let t = minTime; t <= maxTime; t++) {
-        timeLabels.push(`${String(t % 24).padStart(2, '0')}:00`);
-    }
-
-    let html = '<div class="gantt-chart">';
-
-    // header
-    html += '<div class="gantt-header">';
-    html += '<div class="gantt-berth-label">泊位</div>';
-    html += '<div class="gantt-timeline">';
-    timeLabels.forEach(t => { html += `<span>${t}</span>`; });
     html += '</div></div>';
-
-    // rows
-    berths.forEach(berthName => {
-        const ships = berthMap[berthName];
-        html += '<div class="gantt-row">';
-        html += `<div class="gantt-row-label">${berthName}</div>`;
-        html += '<div class="gantt-row-track">';
-
-        ships.forEach(a => {
-            const left = ((a.startHours - minTime) / timeSpan) * 100;
-            const width = ((a.endHours - a.startHours) / timeSpan) * 100;
-            const colorIdx = (assignments.indexOf(a)) % COLORS.length;
-            const bg = COLORS[colorIdx];
-
-            html += `<div class="gantt-bar" style="left:${left}%;width:${Math.max(width, 2)}%;background:${bg};"
-                          title="${a.shipName}\n靠泊: ${a.startTimeStr}\n离泊: ${a.endTimeStr}\n岸桥: QC${String(a.qcStart).padStart(2,'0')}-QC${String(a.qcEnd).padStart(2,'0')}\n等待: ${a.waitTimeMin}分钟">
-                        <span class="bar-label">${a.shipName}</span>
-                        <span class="bar-time">${a.startTimeStr}-${a.endTimeStr}</span>
-                    </div>`;
+    berths.forEach(name => {
+        html += '<div class="gantt-row"><div class="gantt-row-label" title="' + escapeHTML(name) + '">' + escapeHTML(name) + '</div><div class="gantt-row-track">';
+        berthMap.get(name).forEach(a => {
+            const left = (a.startHours - minTime) / timeSpan * 100;
+            const width = (a.endHours - a.startHours) / timeSpan * 100;
+            const tooltip = a.shipName + '\n靠泊：' + a.startTimeStr + '\n离泊：' + a.endTimeStr + '\n岸桥：QC' + a.qcStart + '–QC' + a.qcEnd + '\n等待：' + a.waitTimeMin + ' 分钟';
+            html += '<div class="gantt-bar" tabindex="0" aria-label="' + escapeHTML(tooltip) + '" title="' + escapeHTML(tooltip) + '" style="left:' + left + '%;width:' + Math.max(width,0.4) + '%;background:' + colors[assignments.indexOf(a) % colors.length] + '"><span class="bar-label">' + escapeHTML(a.shipName) + '</span><span class="bar-time">' + escapeHTML(a.startTimeStr) + ' – ' + escapeHTML(a.endTimeStr) + '</span></div>';
         });
-
         html += '</div></div>';
     });
-
-    html += '</div>';
-    container.innerHTML = html;
+    container.innerHTML = html + '</div>';
 }
 
 // ============================================================
@@ -646,10 +605,10 @@ function renderDetailTable(assignments) {
         const waitClass = a.waitTimeMin === 0 ? 'wait-zero' : (a.waitTimeMin > 30 ? 'wait-high' : '');
         return `
         <tr>
-            <td class="ship-name-cell">${a.shipName}</td>
+            <td class="ship-name-cell">${escapeHTML(a.shipName)}</td>
             <td>${a.teu}</td>
             <td>${a.length} m</td>
-            <td><span class="berth-badge">${a.berthName}</span></td>
+            <td><span class="berth-badge">${escapeHTML(a.berthName)}</span></td>
             <td><strong>${a.qcCount}</strong> 台</td>
             <td class="qc-badge">QC${String(a.qcStart).padStart(2,'0')} ~ QC${String(a.qcEnd).padStart(2,'0')}</td>
             <td>${a.startTimeStr}</td>
@@ -665,6 +624,26 @@ function renderDetailTable(assignments) {
 // 页面初始化
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
+    ['paretoRow','paretoCountBadge','kpiCo2','kpiTime','kpiCost','activeSolTag','ganttContainer','tableBody'].forEach(id => { resultsSnapshot[id] = document.getElementById(id).innerHTML; });
+    document.getElementById('shipSearch').addEventListener('input', renderShipPool);
     refreshShipPool();
     loadBerthConfigOverview();
 });
+
+function exportCurrentSolution() {
+    const sol = currentSolutions.find(s => s.id === activeSolutionId);
+    if (!sol) return;
+    const columns = ['船舶名称','货量(TEU)','船长(m)','泊位','岸桥数量','岸桥起始','岸桥结束','靠泊时间','离泊时间','等待(min)','作业(min)','碳排放(kg)'];
+    const safeCell = value => {
+        const text = String(value ?? '');
+        return escapeCSVCell(/^[=+@\-]/.test(text) ? "'" + text : text);
+    };
+    const rows = sol.assignments.map(a => [a.shipName,a.teu,a.length,a.berthName,a.qcCount,a.qcStart,a.qcEnd,a.startTimeStr,a.endTimeStr,a.waitTimeMin,a.workTimeMin,a.shipCo2]);
+    const csv = '\uFEFF' + [columns,...rows].map(row => row.map(safeCell).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'}));
+    const link = document.createElement('a');
+    link.href = url; link.download = 'EcoPort_调度方案_' + (sol.id + 1) + '.csv';
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    alertMsg('已导出当前方案的执行明细');
+}

@@ -1,81 +1,52 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="light" style="--default-theme: light;">
+<html lang="zh-CN" data-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}绿色低碳智能港口调度系统{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/navigation.css') }}">
-    {% block extra_css %}{% endblock %}
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="theme-color" content="#122b40">
+<title>{% block title %}EcoPort · 绿色港口调度平台{% endblock %}</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/themes.css') }}" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/navigation.css') }}" rel="stylesheet">
+{% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- 导航栏 -->
-    <nav class="main-navbar">
-        <div class="container-fluid">
-            <div class="navbar-brand">
-                <i class="bi bi-leaf"></i>
-                <span data-i18n="system.name">绿色低碳智能港口调度系统</span>
-            </div>
-
-            <div class="navbar-menu" id="navbarMenu">
-                <a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}" data-i18n="nav.home">首页</a>
-                <a href="/port-config" class="nav-item {% if request.path == '/port-config' %}active{% endif %}" data-i18n="nav.portConfig">泊位配置</a>
-                <a href="/history" class="nav-item {% if request.path == '/history' %}active{% endif %}" data-i18n="nav.history">历史记录</a>
-            </div>
-
-            <div class="navbar-controls">
-                <select id="themeSelector" class="control-select">
-                    <option value="light" data-i18n="theme.light">明亮模式</option>
-                    <option value="dark" data-i18n="theme.dark">暗黑模式</option>
-                    <option value="blue" data-i18n="theme.blue">海洋蓝</option>
-                </select>
-
-                <select id="langSelector" class="control-select">
-                    <option value="zh-CN" data-i18n="language.zh-CN">简体中文</option>
-                    <option value="en" data-i18n="language.en">English</option>
-                </select>
-
-                <div class="user-info">
-                    <i class="bi bi-person-circle"></i>
-                    <span>{{ current_user.username }}</span>
-                </div>
-
-                <a href="/logout" class="btn-logout" data-i18n="nav.logout">退出</a>
-            </div>
-
-            <button class="navbar-toggle" id="navbarToggle">
-                <i class="bi bi-list"></i>
-            </button>
-        </div>
-    </nav>
-
-    <!-- 主内容区域 -->
-    <main class="main-content">
-        {% block content %}{% endblock %}
-    </main>
-
-    <!-- 页脚 -->
-    <footer class="main-footer">
-        <div class="container-fluid">
-            <p>&copy; 2026 绿色低碳智能港口调度系统 |
-                <a href="/about" data-i18n="nav.about">关于</a> |
-                <a href="/privacy" data-i18n="nav.privacy">隐私政策</a>
-            </p>
-        </div>
-    </footer>
-
-    <!-- 通用脚本 -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
-    <script>
-        // 移动端导航切换
-        document.getElementById('navbarToggle')?.addEventListener('click', () => {
-            document.getElementById('navbarMenu')?.classList.toggle('active');
-        });
-    </script>
-    {% block extra_js %}{% endblock %}
-</body>
-</html>
+<a class="skip-link" href="#mainContent">跳转到主要内容</a>
+<aside class="app-sidebar" id="navbarMenu" aria-label="主导航">
+<a href="/" class="brand-lockup"><span class="brand-symbol"><svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M6 22V10h8v12M14 15h10v7M3 25c4 3 8-3 13 0s9 0 13-1M10 6v4M6 15h8M19 10v5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><strong>EcoPort<span class="brand-dot">.</span></strong><small>绿色港口 · 智能调度</small></span></a>
+<div class="nav-section-label">WORKSPACE / 工作空间</div>
+<nav class="sidebar-nav">
+<a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}" {% if request.path == '/' %}aria-current="page"{% endif %}><i class="bi bi-grid-1x2"></i><span data-i18n="nav.home">调度工作台</span><i class="bi bi-chevron-right nav-arrow"></i></a>
+<a href="/port-config" class="nav-item {% if request.path == '/port-config' %}active{% endif %}" {% if request.path == '/port-config' %}aria-current="page"{% endif %}><i class="bi bi-bounding-box"></i><span data-i18n="nav.portConfig">泊位与资源</span><i class="bi bi-chevron-right nav-arrow"></i></a>
+<a href="/history" class="nav-item {% if request.path == '/history' %}active{% endif %}" {% if request.path == '/history' %}aria-current="page"{% endif %}><i class="bi bi-clock-history"></i><span data-i18n="nav.history">调度历史</span><i class="bi bi-chevron-right nav-arrow"></i></a>
+</nav>
+<div class="sidebar-note"><span class="note-icon"><i class="bi bi-globe2"></i></span><strong>让每一次靠泊，更低碳。</strong><p>协同船舶、泊位与岸桥<br>探索效率与能耗的更优平衡</p><div class="note-line"><span></span><span></span><span></span></div></div>
+<div class="sidebar-bottom"><span class="status-dot"></span> NSGA-II 多目标优化引擎<small>ECOPORT PLATFORM · V1.0</small></div>
+</aside>
+<button class="sidebar-backdrop" id="sidebarBackdrop" aria-label="关闭导航" hidden></button>
+<div class="app-shell">
+<header class="app-topbar">
+<div class="topbar-left"><button class="icon-button mobile-menu" id="navbarToggle" aria-label="展开导航" aria-controls="navbarMenu" aria-expanded="false"><i class="bi bi-list"></i></button><span class="breadcrumb-root">管理控制台</span><i class="bi bi-chevron-right breadcrumb-divider"></i><span class="breadcrumb-current">{% if request.path == '/port-config' %}泊位与资源{% elif request.path == '/history' %}调度历史{% else %}调度工作台{% endif %}</span></div>
+<div class="topbar-controls">
+<label class="select-wrap" title="界面主题"><i class="bi bi-circle-half"></i><select id="themeSelector" aria-label="界面主题"><option value="light" data-i18n="theme.light">云白</option><option value="dark" data-i18n="theme.dark">石墨黑</option><option value="blue" data-i18n="theme.blue">深海蓝</option></select></label>
+<label class="select-wrap language-select"><i class="bi bi-translate"></i><select id="langSelector" aria-label="显示语言"><option value="zh-CN">简体中文</option><option value="en">English</option></select></label>
+<div class="user-info"><span class="user-avatar">{{ current_user.username[:1]|upper }}</span><span>{{ current_user.username }}</span></div>
+<a href="/logout" class="icon-button logout-link" title="退出登录" aria-label="退出登录"><i class="bi bi-box-arrow-right"></i></a>
+</div>
+</header>
+<main class="main-content" id="mainContent">{% block content %}{% endblock %}</main>
+<footer class="main-footer"><span>EcoPort · 绿色低碳智能港口调度平台</span><span>以数据驱动，让港口更高效</span></footer>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+<script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
+<script>
+const menuButton = document.getElementById('navbarToggle');
+const menuBackdrop = document.getElementById('sidebarBackdrop');
+function setMenu(open) { document.body.classList.toggle('menu-open', open); menuButton.setAttribute('aria-expanded', String(open)); menuBackdrop.hidden = !open; }
+menuButton.addEventListener('click', () => setMenu(!document.body.classList.contains('menu-open')));
+menuBackdrop.addEventListener('click', () => setMenu(false));
+document.addEventListener('keydown', event => { if (event.key === 'Escape') setMenu(false); });
+window.matchMedia('(min-width: 961px)').addEventListener('change', event => { if (event.matches) setMenu(false); });
+</script>
+{% block extra_js %}{% endblock %}
+</body></html>

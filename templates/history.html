@@ -1,186 +1,35 @@
 {% extends "base.html" %}
-
-{% block title %}历史记录 - 绿色低碳智能港口调度系统{% endblock %}
-
-{% block extra_css %}
-<style>
-    .history-container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 20px;
-    }
-
-    .history-header {
-        margin-bottom: 30px;
-    }
-
-    .history-filters {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-    }
-
-    .history-table-container {
-        background: var(--bg-card);
-        border-radius: 12px;
-        padding: 24px;
-        box-shadow: var(--shadow-md);
-    }
-
-    .history-item {
-        background: var(--bg-hover);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 16px;
-        transition: all 0.2s ease;
-    }
-
-    .history-item:hover {
-        border-color: var(--color-primary);
-        box-shadow: var(--shadow-md);
-    }
-
-    .history-meta {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
-        margin-bottom: 16px;
-    }
-
-    .meta-item {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .meta-label {
-        font-size: 12px;
-        color: var(--text-muted);
-        text-transform: uppercase;
-    }
-
-    .meta-value {
-        font-size: 16px;
-        font-weight: 600;
-        color: var(--text-primary);
-    }
-
-    .history-actions {
-        display: flex;
-        gap: 8px;
-    }
-
-    .kpi-badges {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-    }
-
-    .kpi-badge {
-        padding: 6px 12px;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    .kpi-co2 {
-        background: var(--color-success-light);
-        color: var(--color-success);
-    }
-
-    .kpi-time {
-        background: var(--color-info-light);
-        color: var(--color-info);
-    }
-
-    .kpi-cost {
-        background: var(--color-warning-light);
-        color: var(--color-warning);
-    }
-
-    .objectives-section {
-        padding: 12px 16px;
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-    }
-
-    .objectives-title {
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 10px;
-    }
-
-    .pareto-overview {
-        padding: 12px 16px;
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-    }
-
-    .pareto-mini-table .table {
-        font-size: 13px;
-    }
-
-    .pareto-mini-table .table th {
-        font-size: 11px;
-        padding: 6px 8px;
-    }
-
-    .pareto-mini-table .table td {
-        padding: 6px 8px;
-    }
-
-    .pareto-mini-table .table-success td {
-        background: var(--color-success-light) !important;
-    }
-</style>
-{% endblock %}
-
+{% block title %}调度记录 - 绿色低碳智能港口调度系统{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css') }}">{% endblock %}
 {% block content %}
-<div class="history-container">
-    <div class="history-header">
-        <h2 data-i18n="history.title">调度历史记录</h2>
-        <p class="text-muted">查看和管理您的调度历史</p>
+<div class="secondary-page history-page">
+    <header class="page-heading">
+        <div><span class="eyebrow">SCHEDULING ARCHIVE</span><h1 data-i18n="history.title">调度历史记录</h1><p>追溯每一次调度决策，比较方案表现，沉淀港口运营经验。</p></div>
+        <div class="page-actions"><a class="btn btn-primary" href="/"><i class="bi bi-plus-lg"></i>新建调度</a></div>
+    </header>
+    <div class="archive-stats">
+        <div class="archive-stat"><div class="archive-stat-icon"><i class="bi bi-clock-history"></i></div><div><span>累计调度记录</span><strong id="historyCount">—</strong></div><small>次</small></div>
+        <div class="archive-stat"><div class="archive-stat-icon"><i class="bi bi-box-seam"></i></div><div><span>累计调度船舶</span><strong id="historyShipCount">—</strong></div><small>艘次</small></div>
+        <div class="archive-stat"><div class="archive-stat-icon"><i class="bi bi-intersect"></i></div><div><span>累计生成方案</span><strong id="historySolutionCount">—</strong></div><small>个</small></div>
     </div>
-
-    <div class="history-filters">
-        <input type="date" class="form-control" id="filterStartDate" style="max-width: 180px;">
-        <input type="date" class="form-control" id="filterEndDate" style="max-width: 180px;">
-        <button class="btn btn-primary" onclick="loadHistory()">
-            <i class="bi bi-search"></i>
-            <span data-i18n="common.search">搜索</span>
-        </button>
-        <button class="btn btn-secondary" onclick="resetFilters()">
-            <i class="bi bi-arrow-clockwise"></i>
-            <span data-i18n="common.refresh">刷新</span>
-        </button>
-    </div>
-
-    <div class="history-table-container">
-        <div id="historyList"></div>
-    </div>
+    <section class="panel history-archive-panel">
+        <div class="panel-heading"><div><h2>调度档案</h2><p id="historyResultLabel">正在读取历史记录</p></div><span class="subtle-label"><i class="bi bi-sort-down"></i> 最新记录优先</span></div>
+        <form class="history-filters" id="historyFilterForm">
+            <div class="history-filter-field"><label class="form-label" for="filterStartDate">开始日期</label><input type="date" class="form-control" id="filterStartDate"></div>
+            <span class="filter-divider">—</span>
+            <div class="history-filter-field"><label class="form-label" for="filterEndDate">结束日期</label><input type="date" class="form-control" id="filterEndDate"></div>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i><span data-i18n="common.search">筛选记录</span></button>
+            <button class="btn btn-light" type="button" onclick="resetFilters()"><i class="bi bi-arrow-clockwise"></i><span data-i18n="common.refresh">重置</span></button>
+        </form>
+        <div id="historyNotice" class="alert d-none mx-4" role="status" aria-live="polite"></div>
+        <div id="historyList" class="history-list" aria-live="polite"><div class="page-empty"><div class="spinner-border spinner-border-sm" role="status"></div><p>正在加载调度记录…</p></div></div>
+    </section>
 </div>
-
-<!-- 详情模态框 -->
-<div class="modal fade" id="detailModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" data-i18n="history.viewDetail">调度详情</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="detailContent"></div>
-        </div>
-    </div>
+<div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
+        <div class="modal-header"><div><span class="eyebrow">SCHEDULE DETAILS</span><h5 class="modal-title" id="detailModalTitle" data-i18n="history.viewDetail">调度详情</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button></div>
+        <div class="modal-body" id="detailContent"></div>
+    </div></div>
 </div>
 {% endblock %}
-
-{% block extra_js %}
-<script src="{{ url_for('static', filename='js/history.js') }}"></script>
-{% endblock %}
+{% block extra_js %}<script src="{{ url_for('static', filename='js/history.js') }}"></script>{% endblock %}

@@ -1,0 +1,10 @@
+{
+  "created": "2026-10-16",
+  "files": {
+    "app.py": "94eef87cbdb08d70809e5da991f95522af1d2b20a1ba18adf56ee874fa55ba86",
+    "scheduling_objectives.py": "6b383678f4e7f5fb26a35d1bf4c7e439fcdf07c4967fa3824f3babed61c5d357",
+    "competition/kernel.py": "14ac8fe31839154cbc7f8780f3b9e15d227451142092c57a98edb3434fc651e3",
+    "competition/baseline/app_before_objective_v2.py": "46f44ae282ce60cd5f7e4a2fe326fb79ca469316cbf1d4223df11dca73ed4148"
+  },
+  "constraints": "decode_solution and calculate_penalty unchanged from original"
+}

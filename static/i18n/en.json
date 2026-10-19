@@ -4,9 +4,9 @@
         "fullName": "Green Low-Carbon Intelligent Berth & Quay Crane Scheduling System"
     },
     "nav": {
-        "home": "Home",
-        "portConfig": "Port Config",
-        "history": "History",
+        "home": "Scheduling workspace",
+        "portConfig": "Berths & resources",
+        "history": "Schedule history",
         "docs": "Docs",
         "logout": "Logout",
         "about": "About",
@@ -69,7 +69,7 @@
     },
     "schedule": {
         "title": "Scheduling Parameters",
-        "runAlgorithm": "Run Algorithm",
+        "runAlgorithm": "Start smart scheduling",
         "running": "Running...",
         "weights": "Objective Weights",
         "co2Weight": "CO2 Weight",
@@ -172,9 +172,9 @@
         "refresh": "Refresh"
     },
     "theme": {
-        "dark": "Dark",
-        "light": "Light",
-        "blue": "Ocean Blue"
+        "dark": "Graphite",
+        "light": "Cloud White",
+        "blue": "Deep Ocean"
     },
     "language": {
         "zh-CN": "简体中文",

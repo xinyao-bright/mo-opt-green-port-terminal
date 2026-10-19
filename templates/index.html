@@ -1,337 +1,70 @@
 {% extends "base.html" %}
-
-{% block title %}{{ i18n.t('system.fullName') if i18n else '绿色低碳智能港口调度系统' }}{% endblock %}
-
-{% block extra_css %}
-<link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
-{% endblock %}
-
+{% block title %}调度工作台 · EcoPort{% endblock %}
+{% block extra_css %}<link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">{% endblock %}
 {% block content %}
-<div class="container-fluid py-3 px-4">
-    <div class="row g-3">
-        <!-- 左侧面板 -->
-        <div class="col-xl-3 col-lg-4">
-            <!-- 船舶数据源 -->
-            <div class="twin-card">
-                <div class="card-title-bar">
-                    <i class="bi bi-box-seam"></i>
-                    <span data-i18n="shipPool.title">船舶数据源调度池</span>
-                </div>
-                <div class="p-3">
-                    <input type="file" id="csvFile" accept=".csv" class="form-control form-control-sm mb-2" onchange="updateSelectedFileInfo()">
-                    <div id="selectedFileInfo" class="selected-file-info mb-2">
-                        <i class="bi bi-info-circle me-1"></i>
-                        <span data-i18n="shipPool.uploadCSV">尚未选择 CSV 文件</span>
-                    </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <button class="btn btn-sm btn-outline-primary w-100" onclick="openFileImportModal()">
-                                <i class="bi bi-upload"></i>
-                                <span data-i18n="shipPool.import">文件导入</span>
-                            </button>
-                        </div>
-                        <div class="col-6">
-                            <button class="btn btn-sm btn-outline-warning w-100" onclick="openManualInputModal()">
-                                <i class="bi bi-pencil-square"></i>
-                                <span data-i18n="shipPool.manual">手动输入</span>
-                            </button>
-                        </div>
-                    </div>
-                    <button class="btn btn-sm btn-outline-danger w-100 mb-3" onclick="clearPool()">
-                        <i class="bi bi-trash3"></i>
-                        <span data-i18n="shipPool.clear">清空待调度集</span>
-                    </button>
-
-                    <label class="text-muted text-sm d-block mb-1" data-i18n="shipPool.currentCount">当前就绪船舶列表</label>
-                    <div class="ship-scroll-box" id="shipBox">
-                        <div class="text-center py-4 text-muted fs-7" data-i18n="common.noData">暂无待调船舶，请先导入或手动输入</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 权重设置 -->
-            <div class="twin-card mt-3">
-                <div class="card-title-bar">
-                    <i class="bi bi-sliders2-vertical"></i>
-                    <span data-i18n="schedule.title">多目标寻优决策权重</span>
-                </div>
-                <div class="p-3">
-                    <div class="mb-2">
-                        <div class="d-flex justify-content-between text-sm">
-                            <span data-i18n="schedule.co2Weight">碳排放权重</span>
-                            <span id="v1">0.4</span>
-                        </div>
-                        <input type="range" id="wCo2" min="0" max="1" step="0.05" value="0.4" class="twin-range" oninput="document.getElementById('v1').innerText=this.value">
-                    </div>
-                    <div class="mb-2">
-                        <div class="d-flex justify-content-between text-sm">
-                            <span data-i18n="schedule.timeWeight">停留时间权重</span>
-                            <span id="v2">0.3</span>
-                        </div>
-                        <input type="range" id="wTime" min="0" max="1" step="0.05" value="0.3" class="twin-range" oninput="document.getElementById('v2').innerText=this.value">
-                    </div>
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between text-sm">
-                            <span data-i18n="schedule.costWeight">成本权重</span>
-                            <span id="v3">0.3</span>
-                        </div>
-                        <input type="range" id="wCost" min="0" max="1" step="0.05" value="0.3" class="twin-range" oninput="document.getElementById('v3').innerText=this.value">
-                    </div>
-
-                    <div class="row g-2 mb-3 pt-2 border-top">
-                        <div class="col-6">
-                            <label class="text-muted text-xs" data-i18n="schedule.populationSize">种群数</label>
-                            <input type="number" id="popSize" value="60" class="form-control form-control-sm text-center">
-                        </div>
-                        <div class="col-6">
-                            <label class="text-muted text-xs" data-i18n="schedule.maxIterations">迭代步数</label>
-                            <input type="number" id="maxIter" value="200" class="form-control form-control-sm text-center">
-                        </div>
-                        <div class="col-12 mt-1">
-                            <button type="button" class="btn btn-sm btn-outline-info w-100" onclick="recommendParams()">
-                                <i class="bi bi-magic"></i> 智能推荐参数
-                            </button>
-                        </div>
-                        <div class="col-12">
-                            <div id="paramRecommendInfo" class="text-xs text-muted mt-1" style="display:none;"></div>
-                        </div>
-                    </div>
-
-                    <button class="btn btn-primary w-100 py-2 fw-bold" id="runBtn" onclick="executeNSGA()">
-                        <i class="bi bi-lightning-charge-fill"></i>
-                        <span data-i18n="schedule.runAlgorithm">启动多目标寻优演化</span>
-                    </button>
-                    <div id="runProgress" class="mt-2" style="display:none;">
-                        <div class="progress" style="height: 6px;">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" id="runProgressBar" style="width: 0%; background-color: var(--color-primary);"></div>
-                        </div>
-                        <div class="text-center text-xs text-muted mt-1" id="runProgressText"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 右侧主面板 -->
-        <div class="col-xl-9 col-lg-8">
-            <!-- 当前泊位配置概览 -->
-            <div class="twin-card mb-3">
-                <div class="card-title-bar">
-                    <i class="bi bi-gear"></i>
-                    <span>当前泊位配置概览</span>
-                </div>
-                <div class="p-3">
-                    <div class="row g-3" id="berthConfigOverview">
-                        <div class="col-md-3">
-                            <div class="kpi-block border-primary">
-                                <div class="kpi-label">泊位总数</div>
-                                <div class="kpi-val text-primary" id="configTotalBerths">--</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="kpi-block border-success">
-                                <div class="kpi-label">岸桥总数</div>
-                                <div class="kpi-val text-success" id="configTotalQcs">--</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="kpi-block border-warning">
-                                <div class="kpi-label">岸桥效率</div>
-                                <div class="kpi-val text-warning" id="configQcEff">--</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="kpi-block border-info">
-                                <div class="kpi-label">配置状态</div>
-                                <div class="kpi-val" id="configStatus" style="color: var(--color-primary);">--</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pareto方案选择器 -->
-            <div class="twin-card mb-3">
-                <div class="card-title-bar d-flex justify-content-between align-items-center">
-                    <span>
-                        <i class="bi bi-diagram-3"></i>
-                        <span data-i18n="schedule.solutions">Pareto最优方案集</span>
-                    </span>
-                    <span class="badge bg-secondary px-2 py-1" id="paretoCountBadge">0 个方案</span>
-                </div>
-                <div class="p-3">
-                    <div class="pareto-solution-grid" id="paretoRow">
-                        <div class="text-muted text-center w-100 py-4" data-i18n="common.noData">等待触发算法寻优</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- KPI指标 -->
-            <div class="row g-3 mb-3">
-                <div class="col-md-4">
-                    <div class="kpi-block border-primary">
-                        <div class="kpi-label" data-i18n="schedule.co2Emission">预估碳排放总量</div>
-                        <div class="kpi-val text-primary" id="kpiCo2">-- <span class="fs-6">kg</span></div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="kpi-block border-success">
-                        <div class="kpi-label" data-i18n="schedule.stayTime">总在港驻留耗时</div>
-                        <div class="kpi-val text-success" id="kpiTime">-- <span class="fs-6" data-i18n="units.hour">小时</span></div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="kpi-block border-warning">
-                        <div class="kpi-label" data-i18n="schedule.cost">联合调度总成本</div>
-                        <div class="kpi-val text-warning" id="kpiCost">-- <span class="fs-6">元</span></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 方案概览指标 -->
-            <div class="twin-card mb-3" id="metricsCard" style="display: none;">
-                <div class="card-title-bar">
-                    <i class="bi bi-bar-chart-line"></i>
-                    <span>方案运营指标概览</span>
-                </div>
-                <div class="p-3">
-                    <div class="row g-2 text-center" id="metricsRow">
-                    </div>
-                </div>
-            </div>
-
-            <!-- 甘特图时间线视图 -->
-            <div class="twin-card mb-3">
-                <div class="card-title-bar d-flex justify-content-between align-items-center">
-                    <span>
-                        <i class="bi bi-calendar-range"></i>
-                        <span>泊位-时间甘特图</span>
-                    </span>
-                    <span class="badge bg-primary fw-bold px-2 py-1" id="activeSolTag" data-i18n="common.noData">未装载方案</span>
-                </div>
-                <div class="p-3">
-                    <div id="ganttContainer" class="gantt-container">
-                        <div class="text-muted text-center py-4">运行算法后将展示泊位时间甘特图</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 详细表格 -->
-            <div class="twin-card">
-                <div class="card-title-bar">
-                    <i class="bi bi-grid-3x3-gap"></i>
-                    <span data-i18n="results.detailTable">当前方案调度执行明细</span>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0 text-center align-middle schedule-detail-table">
-                        <thead>
-                            <tr>
-                                <th data-i18n="results.shipName">船舶呼号</th>
-                                <th data-i18n="columns.volume_of_goods">货量(TEU)</th>
-                                <th data-i18n="columns.length_of_ship">船长(m)</th>
-                                <th data-i18n="results.berth">指定泊位</th>
-                                <th data-i18n="results.qc">岸桥</th>
-                                <th>岸桥区间</th>
-                                <th data-i18n="results.startTime">靠泊时刻</th>
-                                <th data-i18n="results.endTime">离泊时刻</th>
-                                <th data-i18n="results.waitTime">等待</th>
-                                <th>作业时长</th>
-                                <th>碳排放</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody">
-                            <tr><td colspan="11" class="py-4 text-muted" data-i18n="common.noData">等待方案加载</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="page-heading">
+<div><div class="eyebrow">OPERATIONS OVERVIEW</div><h1>调度工作台</h1><p>统筹港口作业，让效率与低碳同行。</p></div>
+<div class="page-actions"><span class="workspace-status"><span class="status-dot"></span><span id="workspaceStatus">等待船舶数据</span></span><button class="btn btn-primary" onclick="document.getElementById('csvFile').click()"><i class="bi bi-plus-lg"></i> 导入船舶</button></div>
 </div>
-
-<!-- 文件导入模态框 -->
-<div class="modal fade" id="fileImportModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" data-i18n="shipPool.import">文件导入</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-info">
-                    <strong data-i18n="columns.ship_id">CSV格式说明：</strong>
-                    <ul class="mb-0 mt-2">
-                        <li data-i18n="columnDescriptions.ship_id">ship_id: 船舶编号</li>
-                        <li data-i18n="columnDescriptions.time_of_reachport">time_of_reachport: 到港时间 (HH:MM)</li>
-                        <li data-i18n="columnDescriptions.volume_of_goods">volume_of_goods: 货物量 (TEU)</li>
-                        <li data-i18n="columnDescriptions.length_of_ship">length_of_ship: 船长 (米)</li>
-                        <li data-i18n="columnDescriptions.auxFuelCons">auxFuelCons: 辅机油耗 (kg/kWh)</li>
-                        <li data-i18n="columnDescriptions.auxRatedPow">auxRatedPow: 辅机功率 (kW)</li>
-                        <li data-i18n="columnDescriptions.auxLF">auxLF: 辅机负载因子 (0-1)</li>
-                    </ul>
-                </div>
-                <button class="btn btn-primary" onclick="importCSV()">
-                    <i class="bi bi-upload"></i>
-                    <span data-i18n="common.import">导入</span>
-                </button>
-            </div>
-        </div>
-    </div>
+<section class="resource-strip" aria-label="当前港口资源">
+<div class="resource-title"><span class="resource-icon"><i class="bi bi-buildings"></i></span><div><small>当前港口配置</small><strong id="configStatus">加载中</strong></div></div>
+<div class="resource-stat"><span>可用泊位</span><strong id="configTotalBerths">—</strong><small>个</small></div>
+<div class="resource-stat"><span>岸桥总数</span><strong id="configTotalQcs">—</strong><small>台</small></div>
+<div class="resource-stat"><span>岸桥效率</span><strong id="configQcEff">—</strong></div>
+<a href="/port-config" class="resource-link">管理资源 <i class="bi bi-arrow-up-right"></i></a>
+</section>
+<div class="workspace-grid">
+<aside class="planning-column">
+<section class="panel ship-panel">
+<div class="panel-heading"><h2><i class="bi bi-box-seam section-icon"></i> 待调度船舶</h2><span class="count-badge" id="shipCountBadge">0 艘</span></div>
+<div class="panel-body">
+<label class="upload-zone" for="csvFile"><span class="upload-icon"><i class="bi bi-cloud-arrow-up"></i></span><strong>上传船舶数据</strong><span>选择 CSV 文件，预览后导入</span><input type="file" id="csvFile" accept=".csv" onchange="updateSelectedFileInfo(); if(this.files.length) openFileImportModal();" class="visually-hidden"></label>
+<div id="selectedFileInfo" class="selected-file-info">支持标准 CSV 数据格式</div>
+<button class="btn btn-outline-primary w-100 manual-entry" onclick="openManualInputModal()"><i class="bi bi-pencil-square"></i> 手动录入船舶</button>
+<div class="ship-list-toolbar"><label class="ship-search"><i class="bi bi-search"></i><input type="search" id="shipSearch" placeholder="搜索船舶名称" aria-label="搜索船舶名称"></label><button class="clear-pool-button" onclick="clearPool()" title="清空待调度船舶" aria-label="清空待调度船舶"><i class="bi bi-trash3"></i></button></div>
+<div class="ship-scroll-box" id="shipBox"><div class="empty-state compact-empty"><span class="empty-icon"><i class="bi bi-box-seam"></i></span><strong>船舶池为空</strong><p>导入数据，开始规划本次调度</p></div></div>
 </div>
-
-<!-- 手动输入模态框 -->
-<div class="modal fade" id="manualInputModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" data-i18n="shipPool.manual">
-                    <i class="bi bi-pencil-square me-2"></i>船舶数据手动输入
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-info mb-3">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <strong>数据输入说明：</strong>请按照标准格式输入船舶信息。到港时间支持 HH:MM 格式（如 08:00）或小时浮点数（如 8.5）。
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-bordered text-center align-middle" id="manualShipTable" style="font-size: 0.9rem;">
-                        <thead style="background: var(--bg-hover);">
-                            <tr>
-                                <th style="width: 20%;">船舶名称 (NAME)</th>
-                                <th style="width: 15%;">船长 (LENGTH/m)</th>
-                                <th style="width: 15%;">货量 (TEU)</th>
-                                <th style="width: 20%;">到港时间 (ARRIVALTIME)</th>
-                                <th style="width: 15%;">辅机油耗 (kg/kWh)</th>
-                                <th style="width: 15%;">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="manualShipTableBody">
-                            <tr>
-                                <td><input type="text" class="form-control form-control-sm" placeholder="船舶A" value=""></td>
-                                <td><input type="number" class="form-control form-control-sm" placeholder="280" value="" min="1"></td>
-                                <td><input type="number" class="form-control form-control-sm" placeholder="4200" value="" min="0"></td>
-                                <td><input type="text" class="form-control form-control-sm" placeholder="08:00" value=""></td>
-                                <td><input type="number" class="form-control form-control-sm" placeholder="0.22" value="0.22" step="0.001"></td>
-                                <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeManualShipRow(this)"><i class="bi bi-trash3"></i></button></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addManualShipRow()" style="margin-top: 10px;">
-                    <i class="bi bi-plus-lg me-1"></i>添加一行
-                </button>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary" onclick="submitManualShips()">
-                    <i class="bi bi-check-lg me-1"></i>导入
-                </button>
-            </div>
-        </div>
-    </div>
+</section>
+<section class="panel settings-panel">
+<div class="panel-heading"><h2><i class="bi bi-sliders2 section-icon"></i> 优化偏好</h2><span class="subtle-tag">NSGA-II</span></div>
+<div class="panel-body">
+<p class="settings-caption">调整目标权重，从已生成的 Pareto 方案中选择平衡。权重不改变进化搜索过程。</p>
+<div class="weight-control"><label for="wCo2"><span><i class="bi bi-globe2"></i> 碳排放</span><output id="v1" for="wCo2">0.40</output></label><input type="range" id="wCo2" min="0" max="1" step="0.05" value="0.4" class="twin-range" oninput="document.getElementById('v1').textContent=Number(this.value).toFixed(2)"></div>
+<div class="weight-control"><label for="wTime"><span><i class="bi bi-clock"></i> 在港时间</span><output id="v2" for="wTime">0.30</output></label><input type="range" id="wTime" min="0" max="1" step="0.05" value="0.3" class="twin-range" oninput="document.getElementById('v2').textContent=Number(this.value).toFixed(2)"></div>
+<div class="weight-control"><label for="wCost"><span><i class="bi bi-wallet2"></i> 作业成本</span><output id="v3" for="wCost">0.30</output></label><input type="range" id="wCost" min="0" max="1" step="0.05" value="0.3" class="twin-range" oninput="document.getElementById('v3').textContent=Number(this.value).toFixed(2)"></div>
+<div class="algorithm-settings"><div><label for="popSize">种群数量</label><input type="number" id="popSize" value="60" min="4" max="500" step="1" class="form-control"></div><div><label for="maxIter">迭代次数</label><input type="number" id="maxIter" value="200" min="1" max="2000" step="1" class="form-control"></div></div>
+<button type="button" class="recommend-button" onclick="recommendParams()"><i class="bi bi-stars"></i> 根据船舶规模推荐参数 <i class="bi bi-arrow-right"></i></button>
+<div id="paramRecommendInfo" class="parameter-hint" style="display:none;"></div>
+<details class="objective-settings"><summary>碳排与成本核算参数</summary><p class="settings-caption">电网因子采用 2023 年全国均值；电价与协同单价为演示假设，请按港区校准。</p>
+<label for="gridFactor">电网排放因子 / kgCO₂·kWh⁻¹</label><input id="gridFactor" type="number" min="0" step="0.0001" value="0.5306" class="form-control">
+<label for="electricityPrice">电价 / 元·kWh⁻¹</label><input id="electricityPrice" type="number" min="0" step="0.01" value="0.8" class="form-control">
+<label for="coordinationCost">岸桥协同单价 / 元·岸桥对·小时⁻¹</label><input id="coordinationCost" type="number" min="0" step="1" value="20" class="form-control">
+<label for="serviceAuxRatio">作业期辅机负载比例</label><input id="serviceAuxRatio" type="number" min="0" step="0.1" value="1" class="form-control"></details>
+<button class="btn btn-primary run-button" id="runBtn" onclick="executeNSGA()"><i class="bi bi-play-fill"></i> 开始智能调度</button>
+<div id="runProgress" class="run-progress" style="display:none;" aria-live="polite"><div class="progress" style="height:4px"><div class="progress-bar progress-bar-striped progress-bar-animated" id="runProgressBar" style="width:0%"></div></div><div id="runProgressText" class="text-xs text-muted mt-2"></div></div>
+<div class="settings-footnote"><i class="bi bi-shield-check"></i> 基于当前船舶与已激活资源配置计算</div>
 </div>
+</section>
+</aside>
+<div class="results-column">
+<section class="kpi-grid" aria-label="当前方案指标">
+<article class="kpi-card"><div class="kpi-top"><span>预估碳排放</span><span class="kpi-icon carbon"><i class="bi bi-globe2"></i></span></div><div class="kpi-val" id="kpiCo2">— <span>kg</span></div><div class="kpi-caption"><span class="metric-dot carbon"></span> 全部船舶作业与等待排放</div></article>
+<article class="kpi-card"><div class="kpi-top"><span>总在港时间</span><span class="kpi-icon time"><i class="bi bi-clock-history"></i></span></div><div class="kpi-val" id="kpiTime">— <span>小时</span></div><div class="kpi-caption"><span class="metric-dot time"></span> 船舶等待与作业时间合计</div></article>
+<article class="kpi-card"><div class="kpi-top"><span>联合调度成本</span><span class="kpi-icon cost"><i class="bi bi-wallet2"></i></span></div><div class="kpi-val" id="kpiCost">— <span>元</span></div><div class="kpi-caption"><span class="metric-dot cost"></span> 船舶与岸桥综合作业成本</div></article>
+</section>
+<section class="panel" id="objectiveExplanation" style="display:none"><div class="panel-heading"><h2>目标核算与推荐依据</h2><span class="subtle-tag">PHYSICAL V2</span></div><div class="panel-body" id="objectiveExplanationBody"></div></section>
+<section class="panel timeline-panel">
+<div class="panel-heading"><div><h2>泊位作业计划</h2><div class="panel-subtitle">BERTH SCHEDULE · 船舶靠泊与作业时间线</div></div><span class="subtle-tag" id="activeSolTag">尚未生成方案</span></div>
+<div class="timeline-toolbar"><span><span class="legend-swatch"></span> 船舶作业区间</span><span><i class="bi bi-info-circle"></i> 悬停查看作业详情</span></div>
+<div id="ganttContainer" class="gantt-container"><div class="schedule-empty"><svg viewBox="0 0 290 94" fill="none" aria-hidden="true"><path d="M40 8v75M102 8v75M164 8v75M226 8v75M0 31h290M0 60h290M0 89h290" stroke="currentColor" opacity=".13" stroke-dasharray="3 4"/><rect x="41" y="12" width="113" height="15" rx="4" fill="currentColor" opacity=".18"/><rect x="104" y="41" width="88" height="15" rx="4" fill="currentColor" opacity=".11"/><rect x="165" y="70" width="95" height="15" rx="4" fill="currentColor" opacity=".18"/></svg><strong>更优的作业计划，从这里开始</strong><p>导入船舶并启动调度后，在这里查看每个泊位的作业安排。</p><div class="empty-steps"><span><b>1</b>导入船舶</span><i class="bi bi-chevron-right"></i><span><b>2</b>设置偏好</span><i class="bi bi-chevron-right"></i><span><b>3</b>生成方案</span></div></div></div>
+<div class="timeline-footer"><span><i class="bi bi-diagram-3"></i> 船舶 · 泊位 · 岸桥协同调度</span><a href="#executionDetails">查看执行明细 <i class="bi bi-arrow-down"></i></a></div>
+</section>
+<section class="panel solutions-panel"><div class="panel-heading"><div><h2>多目标方案对比</h2><div class="panel-subtitle">选择方案，即时查看对应指标与作业计划</div></div><span class="count-badge" id="paretoCountBadge">0 个方案</span></div><div class="panel-body"><div class="pareto-solution-grid" id="paretoRow"><div class="solution-empty"><i class="bi bi-intersect"></i><div><strong>等待生成 Pareto 候选方案</strong><p>算法将综合碳排放、在港时间与成本，推荐更优选择。</p></div></div></div></div></section>
+<section class="panel" id="metricsCard" style="display:none"><div class="panel-heading"><h2>方案运营概览</h2><span class="subtle-tag">当前选中方案</span></div><div class="panel-body"><div class="row g-2" id="metricsRow"></div></div></section>
+</div>
+</div>
+<section class="panel detail-panel" id="executionDetails"><div class="panel-heading"><div><h2>调度执行明细</h2><div class="panel-subtitle">查看船舶、泊位与岸桥的详细分配</div></div><button class="btn btn-outline-primary btn-sm" id="exportResultBtn" onclick="exportCurrentSolution()" disabled><i class="bi bi-download"></i> 导出 CSV</button></div><div class="table-responsive"><table class="table table-hover mb-0 align-middle schedule-detail-table"><thead><tr><th>船舶名称</th><th>货量 / TEU</th><th>船长 / m</th><th>指定泊位</th><th>岸桥数量</th><th>岸桥区间</th><th>靠泊时刻</th><th>离泊时刻</th><th>等待时间</th><th>作业时长</th><th>碳排放</th></tr></thead><tbody id="tableBody"><tr><td colspan="11"><div class="empty-state table-empty"><strong>暂无执行明细</strong><p>完成智能调度后，选择方案查看分配结果。</p></div></td></tr></tbody></table></div></section>
+<div class="modal fade" id="manualInputModal" tabindex="-1" aria-labelledby="manualInputTitle" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="manualInputTitle">手动录入船舶</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button></div><div class="modal-body"><div class="alert alert-info mb-3"><i class="bi bi-info-circle me-2"></i>填写船舶名称、船长和货量，到港时间支持 HH:MM（如 08:00）或小时数（如 8.5）。</div><div class="table-responsive"><table class="table table-bordered align-middle" id="manualShipTable"><thead><tr><th>船舶名称</th><th>船长 / m</th><th>货量 / TEU</th><th>到港时间</th><th>辅机油耗 / kg/kWh</th><th>操作</th></tr></thead><tbody id="manualShipTableBody"><tr><td><input class="form-control form-control-sm" placeholder="如：远洋 01" aria-label="船舶名称"></td><td><input type="number" class="form-control form-control-sm" placeholder="280" min="1" aria-label="船长"></td><td><input type="number" class="form-control form-control-sm" placeholder="4200" min="1" aria-label="货量"></td><td><input class="form-control form-control-sm" placeholder="08:00" aria-label="到港时间"></td><td><input type="number" class="form-control form-control-sm" value="0.22" min="0" step="0.001" aria-label="辅机油耗"></td><td><button class="btn btn-sm btn-outline-danger" onclick="removeManualShipRow(this)" aria-label="移除船舶"><i class="bi bi-trash3"></i></button></td></tr></tbody></table></div><button class="btn btn-outline-primary btn-sm" onclick="addManualShipRow()"><i class="bi bi-plus-lg"></i> 添加船舶</button></div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">取消</button><button class="btn btn-primary" onclick="submitManualShips()"><i class="bi bi-check-lg"></i> 确认导入</button></div></div></div></div>
 {% endblock %}
+{% block extra_js %}<script src="{{ url_for('static', filename='js/script.js') }}"></script>{% endblock %}
 
-{% block extra_js %}
-<script src="{{ url_for('static', filename='js/script.js') }}"></script>
-{% endblock %}
