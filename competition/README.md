@@ -70,7 +70,19 @@ python run_experiments.py --csv "ship_data(S1).csv" --budget 12000 --population 
 
 HV 的参考点统一为归一化后的 (1.1,1.1,1.1)，IGD 参考集是本组最终可行解的非支配并集，**不是真实 Pareto 前沿**。跨参数目录的归一化基准不同，不要直接比较各自 HV 数值。小预算只用于冒烟验证；正式比较建议至少 20 个种子，并增加不同规模和资源紧张程度的实例，单个 S1 算例无法证明普遍优势。
 
-## 旧目标函数
+## 正式消融分析与中文图表
+
+```powershell
+python analyze_study.py --results results_main --figures figures_main
+python run_study.py --csv "ship_data(S1).csv" --out results_q9 --qcs 9 --budget 4000 --population 40 --seeds 10 --workers 4 --methods NSGA2-Repair NSGA2-NoRepair NSGA2-NoAnchor NSGA2-None
+python analyze_study.py --results results_q9 --figures figures_q9
+```
+
+`analyze_study.py` 输出 `study_metrics.csv`、`study_analysis.json` 和收敛轨迹 `study_curves.json`，并生成中文 PNG/PDF/SVG 图表。图表字体默认使用 Windows 微软雅黑，可在脚本中替换为本机可用中文字体。它使用全部方法和种子的最终可行解确定公共尺度，按共同种子计算条件效应与 2×2 交互效应的 bootstrap 区间。三维 HV 的快速实现与独立递归实现进行数值校验。资源少于 15 台岸桥时额外输出成功率和全部运行 HV 图，失败运行不删除。
+
+本次 S1 主实验为 121 次运行，9 岸桥压力实验为 40 次。完整方法相对双重消融的平均 HV 较高，但去修复版本具有更低的经验 IGD。不要用某一指标取代所有维度的比较。原始 S1 数据由参赛团队单独提供，未上传到公开仓库。
+
+## 旧目标函数运行方式
 
 ```powershell
 python run_experiments.py --csv "ship_data(S1).csv" --objective legacy --budget 12000 --population 60 --seeds 20 --out results_legacy
